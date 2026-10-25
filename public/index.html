@@ -1038,7 +1038,8 @@ function renderSummary(keep) {
     ['กำไรสุทธิ', `<span style="color:${profit < 0 ? 'var(--danger)' : 'var(--accent)'}">${profit < 0 ? '−' : ''}${baht(Math.abs(profit))}</span>`,
       total ? `คิดเป็น ${(profit / total * 100).toFixed(0)}% ของรายได้` : 'รายได้ − ค่าใช้จ่าย'],
     ['รับเงินแล้ว', baht(got), `${dep ? `รวมมัดจำ ${baht(dep)} · ` : ''}<span style="color:var(--danger)">ค้างชำระ ${baht(total - got)}</span>`],
-    ['จำนวนคืนที่เข้าพัก', nights.toLocaleString('th-TH') + ' คืน', `${new Set(sel.map(e => e.guest).filter(Boolean)).size} ผู้เข้าพัก`],
+    // คืนที่เข้าพัก / คืนทั้งหมดที่ขายได้ (ห้องที่เปิด × จำนวนวัน)
+    ['จำนวนคืนที่เข้าพัก', `${nights.toLocaleString('th-TH')}/${(openRooms * days).toLocaleString('th-TH')} คืน`, `${new Set(sel.map(e => e.guest).filter(Boolean)).size} ผู้เข้าพัก`],
     ['อัตราเข้าพัก', occ.toFixed(1) + '%', `${openRooms} ห้อง × ${days} วัน`],
     ['เฉลี่ยต่อคืน', baht(nights ? total / nights : 0), 'ADR'],
   ].map(([l, v, s]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
