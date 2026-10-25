@@ -38,6 +38,7 @@ DATA = os.path.join(STORE, "data.json")  # รูปแบบเก่า (ไ�
 ROOMS = os.path.join(STORE, "rooms.json")
 ENTRIES = os.path.join(STORE, "entries")
 EXPENSES = os.path.join(STORE, "expenses")
+HISTORY = os.path.join(STORE, "history")  # ประวัติการทำรายการ: history/YYYY-MM.jsonl (1 บรรทัด = 1 รายการ, เดือนตามเวลาที่ทำ)
 MONTH_FILE = re.compile(r"^\d{4}-\d{2}\.json$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 AUTH = os.path.join(STORE, "auth.json")
@@ -59,7 +60,15 @@ SESSION_TTL = 7 * 24 * 3600
 ITER = 200_000
 
 sessions = {}  # token → {"user", "exp"} — เก็บลง sessions.json ด้วย รีสตาร์ทแล้วไม่หลุด
-fails = {}  # ip → [count, last_ts]
+fails = {}  # "ip:…" / "u:ชื่อผู้ใช้" → [count, last_ts]
+LOCK_MAX, FAIL_RESET = 15 * 60, 24 * 3600
+
+
+def lock_wait(key, n):
+    """ต่อ IP ผิด ≥5 → รอ 2,4,8,… วินาที (สูงสุด 15 นาที) · ต่อชื่อผู้ใช้ ผิด ≥10 → ล็อก 15 นาที (เหมือน worker/index.js)"""
+    if key.startswith("u:"):
+        return LOCK_MAX if n >= 10 else 0
+    return min(LOCK_MAX, 2 ** (n - 4)) if n >= 5 else 0
 lock = threading.Lock()
 
 
@@ -125,6 +134,37 @@ def save_db(db):
     save_months(EXPENSES, db.get("expenses", []))
 
 
+def log_history(user, db, up, de):
+    """บันทึก create / update / delete ของการจองและค่าใช้จ่าย พร้อมข้อมูลก่อน-หลัง (เหมือน worker/index.js)"""
+    t, rows = int(time.time()), []
+    for k in ("entries", "expenses"):
+        old = {x["id"]: x for x in db[k]}
+        for x in up.get(k, []):
+            b = old.get(x["id"])
+            if b is None:
+                rows.append((k, "create", x["id"], x.get("date"), None, x))
+            elif b != x:
+                rows.append((k, "update", x["id"], x.get("date"), b, x))
+        for i in de.get(k, []):
+            if i in old:
+                rows.append((k, "delete", i, old[i].get("date"), old[i], None))
+    if not rows:
+        return
+    os.makedirs(HISTORY, exist_ok=True)
+    with open(os.path.join(HISTORY, time.strftime("%Y-%m.jsonl", time.localtime(t))), "a", encoding="utf-8") as f:
+        for k, action, item_id, date, before, after in rows:
+            f.write(json.dumps({"at": t, "user": user, "kind": k, "action": action, "item_id": item_id, "item_date": date,
+                                "before": before, "after": after}, ensure_ascii=False) + "\n")
+
+
+def read_history(period):
+    path = os.path.join(HISTORY, f"{period}.jsonl")
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()][::-1]  # ใหม่สุดก่อน
+
+
 def migrate():
     """data.json (ไฟล์เดียวแบบเก่า) → rooms.json + entries/ — ทำครั้งเดียว เก็บไฟล์เดิมไว้เป็น data.json.migrated"""
     if os.path.exists(DATA) and not os.path.exists(ROOMS):
@@ -142,7 +182,7 @@ def backup_data():
         return
     os.makedirs(dst)
     shutil.copy2(ROOMS, dst)
-    for folder in (ENTRIES, EXPENSES):
+    for folder in (ENTRIES, EXPENSES, HISTORY):
         if os.path.isdir(folder):
             shutil.copytree(folder, os.path.join(dst, os.path.basename(folder)))
     days = sorted(d for d in os.listdir(BACKUPS) if re.match(r"^\d{4}-\d{2}-\d{2}$", d))
@@ -240,7 +280,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _apply_changes(self, ch):
+    def _apply_changes(self, ch, user):
         """{"upsert": {kind: [...]}, "delete": {kind: [id...]}, "roomOrder": [id...]} — แก้ทีละรายการ ไม่ทับของคนอื่น"""
         kinds = ("rooms", "entries", "expenses")
         up, de = ch.get("upsert") or {}, ch.get("delete") or {}
@@ -253,6 +293,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(400, {"error": f"{k} ต้องมี date แบบ YYYY-MM-DD"})
         with lock:
             db = load_db()
+            log_history(user, db, up, de)
             for k in kinds:
                 gone = set(de.get(k, []))
                 byid = {x["id"]: x for x in db[k] if x["id"] not in gone}
@@ -303,6 +344,11 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(200, load_db())
         if p == "/api/export":
             return self._export()
+        if p == "/api/history":
+            period = parse_qs(urlparse(self.path).query).get("period", [""])[0]
+            if not re.match(r"^\d{4}-\d{2}$", period):
+                return self._json(400, {"error": "period ต้องเป็น YYYY-MM"})
+            return self._json(200, read_history(period))
         if p in STATIC:
             return self._static(STATIC[p])
         return self._json(404, {"error": "not found"})
@@ -327,19 +373,24 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True}, self._new_session(user))
 
         if p == "/api/login":
-            ip = self._ip()
+            user, pw = str(body.get("username", "")).strip()[:40], str(body.get("password", ""))[:200]
+            keys = [f"ip:{self._ip()}", f"u:{user.lower()}"]
+            t = time.time()
             with lock:
-                n, last = fails.get(ip, [0, 0])
-                wait = min(60, 2 ** (n - 4)) if n >= 5 else 0
-                if time.time() - last < wait:
-                    return self._json(429, {"error": f"ลองผิดหลายครั้ง รอ {int(wait - (time.time() - last)) + 1} วินาที"})
-            user, pw = str(body.get("username", "")).strip(), str(body.get("password", ""))
+                left = max([lock_wait(k, n) - (t - last) for k, (n, last) in ((k, fails.get(k, [0, 0])) for k in keys)
+                            if t - last <= FAIL_RESET] or [0])
+            if left > 0:
+                w = f"{-(-int(left) // 60)} นาที" if left >= 90 else f"{int(left) + 1} วินาที"
+                return self._json(429, {"error": f"ลองผิดหลายครั้ง รอ {w} แล้วลองใหม่"})
             if not check_pw(user, pw):
                 with lock:
-                    fails[ip] = [n + 1, time.time()]
+                    for k in keys:
+                        n, last = fails.get(k, [0, 0])
+                        fails[k] = [1 if t - last > FAIL_RESET else n + 1, t]
                 return self._json(401, {"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
             with lock:
-                fails.pop(ip, None)
+                for k in keys:
+                    fails.pop(k, None)
             return self._json(200, {"ok": True}, self._new_session(user))
 
         if not s:
@@ -368,7 +419,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True})
 
         if p == "/api/changes":
-            return self._apply_changes(body)
+            return self._apply_changes(body, s["user"])
 
         if p == "/api/data":
             if not isinstance(body.get("rooms"), list) or not isinstance(body.get("entries"), list):

@@ -43,3 +43,17 @@ CREATE INDEX IF NOT EXISTS expenses_date ON expenses (date);
 CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, salt TEXT NOT NULL, hash TEXT NOT NULL, iter INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user TEXT NOT NULL, exp INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, last INTEGER NOT NULL);
+
+-- ประวัติการทำรายการ (การจอง / ค่าใช้จ่าย): ใคร ทำอะไร เมื่อไหร่ · before / after = ข้อมูลก่อน-หลัง (JSON แบบหน้าเว็บ)
+CREATE TABLE IF NOT EXISTS history (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  at       INTEGER NOT NULL,                      -- เวลา (unix วินาที)
+  user     TEXT,
+  kind     TEXT NOT NULL CHECK (kind IN ('entries', 'expenses')),
+  action   TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete')),
+  item_id  TEXT NOT NULL,
+  item_date TEXT,                                 -- วันที่ของรายการ (คืนที่จอง / วันที่จ่าย)
+  before   TEXT,
+  after    TEXT
+);
+CREATE INDEX IF NOT EXISTS history_at ON history (at);

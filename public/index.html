@@ -92,6 +92,19 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .kpi .s{font-size:12px;color:var(--muted)}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
 .charts .card{margin:0}
+.hist{display:flex;flex-direction:column}
+.hrow{display:grid;grid-template-columns:92px 74px 1fr;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:start;font-size:14px}
+.hrow .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.hrow .t b{display:block;color:var(--ink);font-size:13px}
+.hrow .what b{font-weight:600}
+.hrow .chg{font-size:12.5px;color:var(--muted);margin-top:3px}
+.hrow .chg s{color:var(--danger);text-decoration:line-through}
+.hrow .chg ins{color:var(--accent);text-decoration:none;font-weight:600}
+.act{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;text-align:center}
+.act.create{background:var(--accent-soft);color:var(--accent)}
+.act.update{background:var(--dep-soft);color:var(--dep-ink)}
+.act.delete{background:var(--danger-soft);color:var(--danger)}
+@media (max-width:640px){.hrow{grid-template-columns:70px 1fr}.hrow .a{grid-column:2;grid-row:1}.hrow .what{grid-column:1/-1}}
 .mtable td,.mtable th{padding:7px 8px}
 .mtable tbody tr{cursor:pointer}
 .mtable tbody tr:hover{background:var(--bg)}
@@ -159,6 +172,7 @@ nav button{white-space:nowrap}
       <button data-tab="calendar">📅 บันทึกค่าเช่า</button>
       <button data-tab="expenses">🧾 ค่าใช้จ่าย</button>
       <button data-tab="summary">📊 สรุป</button>
+      <button data-tab="history">🕘 ประวัติ</button>
     </nav>
     <div class="user" id="userBox" hidden>
       <span id="userName"></span>
@@ -228,6 +242,22 @@ nav button{white-space:nowrap}
       </div>
       <div class="cal" id="exCal"></div>
       <div class="legend" id="exLegend" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ประวัติการทำรายการ -->
+  <section id="tab-history" hidden>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn" id="hiPrev">‹</button>
+        <h2 id="hiTitle" style="min-width:170px;text-align:center"></h2>
+        <button class="btn" id="hiNext">›</button>
+        <div class="sp"></div>
+        <label style="width:auto">แสดง <select id="hiKind" style="width:auto">
+          <option value="">ทั้งหมด</option><option value="entries">ค่าเช่า</option><option value="expenses">ค่าใช้จ่าย</option></select></label>
+      </div>
+      <div id="hiList"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">แสดงตามเวลาที่ทำรายการ (ใหม่สุดก่อน) · บันทึกอัตโนมัติทุกครั้งที่เพิ่ม/แก้/ลบ การจองและค่าใช้จ่าย</div>
     </div>
   </section>
 
@@ -499,8 +529,8 @@ function show(tab) {
   renderHero();
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $$('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
-  try { localStorage.setItem('banrimphoo.tab', tab); } catch {}
-  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: renderSummary })[tab]();
+  if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);  // จำเมนูไว้ในที่อยู่เว็บ → refresh แล้วอยู่เมนูเดิม
+  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: renderSummary, history: renderHistory })[tab]();
 }
 $$('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
@@ -902,6 +932,44 @@ $('#exForm').onsubmit = ev => {
   save(); resetExForm(); renderExList(); renderExCal();
 };
 
+// ---------- ประวัติการทำรายการ ----------
+let hiY = today.getFullYear(), hiM = today.getMonth();
+const ACT = { create: 'เพิ่ม', update: 'แก้ไข', delete: 'ลบ' };
+const FIELD = { date: 'วันที่', roomId: 'ห้อง', guest: 'ผู้เข้าพัก', amount: 'จำนวนเงิน', channel: 'ช่องทาง', note: 'หมายเหตุ', cat: 'หมวด' };
+const payText = e => e.paid ? 'ชำระแล้ว' : +e.deposit > 0 ? `มัดจำ ${baht(e.deposit)}` : 'ค้างชำระ';
+const roomName = id => roomById(id)?.name ?? '(ห้องที่ลบแล้ว)';
+const fieldVal = (k, e) => k === 'roomId' ? `ห้อง ${roomName(e.roomId)}` : k === 'amount' ? baht(e.amount)
+  : k === 'date' ? shortTh(e.date) : (e[k] || '-');
+function describe(kind, e) {
+  return kind === 'entries'
+    ? `<b>🛏 ห้อง ${esc(roomName(e.roomId))}</b> · ${esc(e.guest || 'ไม่ระบุชื่อ')} · คืน ${shortTh(e.date)} · ${baht(e.amount)} · ${payText(e)}`
+    : `<b>🧾 ${esc(e.cat)}</b> · ${baht(e.amount)} · ${shortTh(e.date)}${e.note ? ' · ' + esc(e.note) : ''}`;
+}
+function changesOf(kind, b, a) {
+  const keys = kind === 'entries' ? ['date', 'roomId', 'guest', 'amount', 'channel', 'note'] : ['date', 'cat', 'amount', 'channel', 'note'];
+  const out = keys.filter(k => String(b[k] ?? '') !== String(a[k] ?? ''))
+    .map(k => `${FIELD[k]}: <s>${esc(fieldVal(k, b))}</s> → <ins>${esc(fieldVal(k, a))}</ins>`);
+  if (kind === 'entries' && payText(b) !== payText(a)) out.push(`สถานะ: <s>${esc(payText(b))}</s> → <ins>${esc(payText(a))}</ins>`);
+  return out.join(' · ');
+}
+async function renderHistory() {
+  $('#hiTitle').textContent = `${TH_MONTHS[hiM]} ${be(hiY)}`;
+  if (mode !== 'server') { $('#hiList').innerHTML = '<div class="empty">ประวัติใช้ได้เมื่อเปิดผ่านเซิร์ฟเวอร์</div>'; return; }
+  $('#hiList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  const r = await fetch(`api/history?period=${hiY}-${pad(hiM + 1)}`, { cache: 'no-store' });
+  if (r.status === 401) return toLogin();
+  const kind = $('#hiKind').value, list = (await r.json()).filter(h => !kind || h.kind === kind);
+  $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
+    const d = new Date(h.at * 1000), e = h.after || h.before;
+    return `<div class="hrow"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
+      <div class="a"><span class="act ${h.action}">${ACT[h.action]}</span></div>
+      <div class="what">${describe(h.kind, e)}${h.action === 'update' ? `<div class="chg">${changesOf(h.kind, h.before, h.after) || 'ไม่มีการเปลี่ยนที่แสดงได้'}</div>` : ''}</div></div>`;
+  }).join('')}</div>` : '<div class="empty">ยังไม่มีการทำรายการในเดือนนี้</div>';
+}
+$('#hiPrev').onclick = () => { if (--hiM < 0) { hiM = 11; hiY--; } renderHistory(); };
+$('#hiNext').onclick = () => { if (++hiM > 11) { hiM = 0; hiY++; } renderHistory(); };
+$('#hiKind').onchange = renderHistory;
+
 // ---------- summary ----------
 function initSummaryFilters() {
   const years = new Set([today.getFullYear(), ...db.entries.map(e => +e.date.slice(0, 4))]);
@@ -1114,7 +1182,9 @@ document.addEventListener('mousemove', ev => {
 (async () => {
   await load();
   await showUser();
-  show(db.rooms.length ? 'today' : 'rooms');  // เปิดเว็บมาเจอหน้า "วันนี้" ก่อนเสมอ
+  // มี #เมนู ในที่อยู่เว็บ (เช่น refresh) → เปิดเมนูนั้น · เปิดเว็บใหม่ → หน้า "วันนี้"
+  const TABS = ['today', 'rooms', 'calendar', 'expenses', 'summary', 'history'], fromHash = location.hash.slice(1);
+  show(TABS.includes(fromHash) ? fromHash : db.rooms.length ? 'today' : 'rooms');
 })();
 </script>
 </body>

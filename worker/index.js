@@ -14,6 +14,38 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
+// security headers ทุก response · CSP อนุญาต inline เพราะหน้าเว็บเขียน script/style ไว้ในไฟล์ html
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+    + "img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+};
+function secure(res) {
+  const out = new Response(res.body, res);  // redirect/asset response ปิดแก้ header → สร้างใหม่
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) out.headers.set(k, v);
+  return out;
+}
+
+// กันเดารหัส: ต่อ IP ผิด ≥5 → รอ 2,4,8,… วินาที (สูงสุด 15 นาที) · ต่อชื่อผู้ใช้ ผิด ≥10 → ล็อก 15 นาที
+// (ล็อกตามชื่อผู้ใช้กันคนที่สลับหลาย IP) · ไม่ได้ผิดนาน 24 ชม. → นับใหม่
+const LOCK_MAX = 15 * 60, FAIL_RESET = 24 * 3600;
+const lockWait = (key, n) => key.startsWith('u:') ? (n >= 10 ? LOCK_MAX : 0) : (n >= 5 ? Math.min(LOCK_MAX, 2 ** (n - 4)) : 0);
+async function lockedFor(env, keys) {
+  let left = 0;
+  for (const key of keys) {
+    const f = await env.DB.prepare('SELECT n, last FROM fails WHERE ip = ?').bind(key).first();
+    if (!f || now() - f.last > FAIL_RESET) continue;
+    left = Math.max(left, lockWait(key, f.n) - (now() - f.last));
+  }
+  return left;
+}
+const waitText = s => s >= 90 ? `${Math.ceil(s / 60)} นาที` : `${s} วินาที`;
+
 const json = (status, obj, headers = {}) => new Response(JSON.stringify(obj), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers },
 });
@@ -75,7 +107,33 @@ async function loadDb(env, period = '') {
 }
 
 // แก้ทีละรายการ: {upsert: {kind: [...]}, delete: {kind: [id]}, roomOrder: [id]}
-async function applyChanges(env, ch) {
+// ประวัติ: อ่านแถวเดิมก่อนแก้ → บันทึก create / update / delete พร้อมข้อมูลก่อน-หลัง (อยู่ใน batch เดียวกับการแก้)
+const LOGGED = ['entries', 'expenses'];
+async function historyStmts(env, user, up, de) {
+  const ids = LOGGED.flatMap(k => [...(up[k] || []).map(x => [k, String(x.id)]), ...(de[k] || []).map(id => [k, String(id)])]);
+  if (!ids.length) return [];
+  const found = await env.DB.batch(ids.map(([k, id]) => env.DB.prepare(`SELECT * FROM ${k} WHERE id = ?`).bind(id)));
+  const old = new Map(ids.map(([k, id], i) => [`${k}:${id}`, found[i].results[0] ? fromRow(k, found[i].results[0]) : null]));
+  const t = now(), out = [];
+  const log = (k, action, id, date, before, after) => out.push(env.DB.prepare(
+    'INSERT INTO history (at, user, kind, action, item_id, item_date, before, after) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(t, user, k, action, id, date, before && JSON.stringify(before), after && JSON.stringify(after)));
+  for (const k of LOGGED) {
+    for (const x of up[k] || []) {
+      const row = toRow(k, x), b = old.get(`${k}:${x.id}`);
+      const a = fromRow(k, Object.fromEntries(row.cols.map((c, i) => [c, row.vals[i]])));  // รูปแบบเดียวกับที่อ่านจากตาราง → เทียบได้ตรง
+      if (!b) log(k, 'create', x.id, x.date, null, a);
+      else if (JSON.stringify(b) !== JSON.stringify(a)) log(k, 'update', x.id, x.date, b, a);
+    }
+    for (const id of de[k] || []) {
+      const b = old.get(`${k}:${id}`);
+      if (b) log(k, 'delete', String(id), b.date, b, null);
+    }
+  }
+  return out;
+}
+
+async function applyChanges(env, ch, user) {
   const up = ch.upsert || {}, de = ch.delete || {}, stmts = [];
   for (const k of KINDS) {
     const ups = up[k] || [], dels = de[k] || [];
@@ -91,11 +149,21 @@ async function applyChanges(env, ch) {
   }
   (ch.roomOrder || []).forEach((id, i) => stmts.push(env.DB.prepare('UPDATE rooms SET pos = ? WHERE id = ?').bind(i, String(id))));
   if (!stmts.length) return null;
+  stmts.push(...await historyStmts(env, user, up, de));
   try { await env.DB.batch(stmts); } catch (e) {  // batch = ทั้งหมดหรือไม่มีเลย
     return /FOREIGN KEY/i.test(e.message) ? 'มีการจองที่อ้างถึงห้องที่ไม่มีแล้ว — โหลดหน้าใหม่แล้วลองอีกครั้ง'
       : /CHECK/i.test(e.message) ? 'ข้อมูลไม่ถูกต้อง (เช่น ตัวเลขติดลบ หรือวันที่ผิดรูปแบบ)' : `บันทึกไม่สำเร็จ: ${e.message}`;
   }
   return null;
+}
+
+// ประวัติของเดือนที่ทำรายการ (เวลาไทย UTC+7) ใหม่สุดก่อน
+async function history(env, period) {
+  if (!/^\d{4}-\d{2}$/.test(period)) return json(400, { error: 'period ต้องเป็น YYYY-MM' });
+  const y = +period.slice(0, 4), m = +period.slice(5) - 1, TZ = 7 * 3600;
+  const from = Date.UTC(y, m, 1) / 1000 - TZ, to = Date.UTC(y, m + 1, 1) / 1000 - TZ;
+  const r = await env.DB.prepare('SELECT * FROM history WHERE at >= ? AND at < ? ORDER BY at DESC, id DESC LIMIT 2000').bind(from, to).all();
+  return json(200, r.results.map(h => ({ ...h, before: h.before && JSON.parse(h.before), after: h.after && JSON.parse(h.after) })));
 }
 
 async function exportXlsx(env, period) {
@@ -111,17 +179,18 @@ async function exportXlsx(env, period) {
 }
 
 async function login(req, env, body) {
-  const ip = req.headers.get('CF-Connecting-IP') || 'local';
-  const f = await env.DB.prepare('SELECT n, last FROM fails WHERE ip = ?').bind(ip).first() || { n: 0, last: 0 };
-  const wait = f.n >= 5 ? Math.min(60, 2 ** (f.n - 4)) : 0;
-  if (now() - f.last < wait) return json(429, { error: `ลองผิดหลายครั้ง รอ ${wait - (now() - f.last) + 1} วินาที` });
-  const user = String(body.username || '').trim(), pw = String(body.password || '');
+  const user = String(body.username || '').trim().slice(0, 40), pw = String(body.password || '').slice(0, 200);
+  const keys = [`ip:${req.headers.get('CF-Connecting-IP') || 'local'}`, `u:${user.toLowerCase()}`];  // ตาราง fails คอลัมน์ ip = key
+  const left = await lockedFor(env, keys);
+  if (left > 0) return json(429, { error: `ลองผิดหลายครั้ง รอ ${waitText(left)} แล้วลองใหม่` });
   if (!await checkPw(env, user, pw)) {
-    await env.DB.prepare('INSERT INTO fails (ip, n, last) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET n = n + 1, last = excluded.last')
-      .bind(ip, now()).run();
+    const t = now();
+    await env.DB.batch(keys.map(k => env.DB.prepare(
+      'INSERT INTO fails (ip, n, last) VALUES (?, 1, ?) ON CONFLICT(ip) DO UPDATE SET n = CASE WHEN ? - last > ? THEN 1 ELSE n + 1 END, last = excluded.last')
+      .bind(k, t, t, FAIL_RESET)));
     return json(401, { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
   }
-  await env.DB.prepare('DELETE FROM fails WHERE ip = ?').bind(ip).run();
+  await env.DB.batch(keys.map(k => env.DB.prepare('DELETE FROM fails WHERE ip = ?').bind(k)));
   return json(200, { ok: true }, { 'Set-Cookie': await newSession(env, user) });
 }
 
@@ -139,36 +208,41 @@ async function changePassword(env, s, body) {
 
 export default {
   async fetch(req, env) {
-    const url = new URL(req.url), p = url.pathname;
-    const s = await session(req, env);
-
-    if (req.method === 'GET') {
-      if (p === '/api/me') return json(200, { user: s?.user || null, setup: false });
-      if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
-      if ((p === '/login' || p === '/login.html') && s) return Response.redirect(new URL('/', url), 302);
-      if (p === '/api/data') return json(200, await loadDb(env));
-      if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
-      if (p.startsWith('/api/')) return json(404, { error: 'not found' });
-      const res = await env.ASSETS.fetch(req);
-      const out = new Response(res.body, res);
-      out.headers.set('Cache-Control', 'no-store');
-      return out;
-    }
-
-    if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
-    let body;
-    try { body = await req.json(); } catch { body = {}; }
-    if (p === '/api/login') return login(req, env, body);
-    if (!s) return json(401, { error: 'login' });
-    if (p === '/api/logout') {
-      await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(await sha256(s.tok)).run();
-      return json(200, { ok: true }, { 'Set-Cookie': cookie('', 0) });
-    }
-    if (p === '/api/password') return changePassword(env, s, body);
-    if (p === '/api/changes') {
-      const err = await applyChanges(env, body);
-      return err ? json(400, { error: err }) : json(200, { ok: true });
-    }
-    return json(404, { error: 'not found' });
+    return secure(await handle(req, env));
   },
 };
+
+async function handle(req, env) {
+  const url = new URL(req.url), p = url.pathname;
+  const s = await session(req, env);
+
+  if (req.method === 'GET') {
+    if (p === '/api/me') return json(200, { user: s?.user || null, setup: false });
+    if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
+    if ((p === '/login' || p === '/login.html') && s) return Response.redirect(new URL('/', url), 302);
+    if (p === '/api/data') return json(200, await loadDb(env));
+    if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
+  if (p === '/api/history') return history(env, url.searchParams.get('period') || '');
+    if (p.startsWith('/api/')) return json(404, { error: 'not found' });
+    const res = await env.ASSETS.fetch(req);
+    const out = new Response(res.body, res);
+    out.headers.set('Cache-Control', 'no-store');
+    return out;
+  }
+
+  if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
+  let body;
+  try { body = await req.json(); } catch { body = {}; }
+  if (p === '/api/login') return login(req, env, body);
+  if (!s) return json(401, { error: 'login' });
+  if (p === '/api/logout') {
+    await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(await sha256(s.tok)).run();
+    return json(200, { ok: true }, { 'Set-Cookie': cookie('', 0) });
+  }
+  if (p === '/api/password') return changePassword(env, s, body);
+  if (p === '/api/changes') {
+    const err = await applyChanges(env, body, s.user);
+    return err ? json(400, { error: err }) : json(200, { ok: true });
+  }
+  return json(404, { error: 'not found' });
+}
