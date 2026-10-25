@@ -168,7 +168,7 @@ nav button{white-space:nowrap}
 <body>
 <header>
   <div class="bar">
-    <div class="brand"><div class="logo" data-scene="logo"></div><span>บ้านริมภู<small>ระบบจัดการที่พัก</small></span></div>
+    <div class="brand"><div class="logo" data-scene="logo" data-motion="0"></div><span>บ้านริมภู<small>ระบบจัดการที่พัก</small></span></div>
     <nav>
       <button data-tab="today">🏠 วันนี้</button>
       <button data-tab="rooms">🛏 จัดการห้องพัก</button>
@@ -186,7 +186,7 @@ nav button{white-space:nowrap}
 </header>
 
 <main>
-  <div class="hero"><div data-scene="banner"></div><div class="txt"><b id="heroHi"></b><div class="stats" id="heroStats"></div></div></div>
+  <div class="hero"><div data-scene="banner" data-motion="20"></div><div class="txt"><b id="heroHi"></b><div class="stats" id="heroStats"></div></div></div>
   <!-- วันนี้ -->
   <section id="tab-today" hidden>
     <div class="card row">
@@ -379,7 +379,7 @@ nav button{white-space:nowrap}
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
 
-<script src="scene.js"></script>
+<script src="scene.js" defer></script>
 <script>
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -573,7 +573,17 @@ $('#askMask').addEventListener('mousedown', e => { if (e.target === e.currentTar
 const addDays = (key, n) => { const d = parseYmd(key); return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)); };
 const guestKey = g => (g || '').trim().toLowerCase().replace(/\s+/g, ' ');  // ชื่อเดียวกัน ไม่สนช่องว่าง/ตัวพิมพ์
 const sameStay = (a, b) => a.roomId === b.roomId && (a.group ? a.group === b.group : guestKey(a.guest) === guestKey(b.guest));
-const nightOf = (e, key) => db.entries.find(x => x.date === key && sameStay(x, e));
+// ดัชนีการจองตามวันที่ (สร้างครั้งเดียวต่อการวาดหน้า แล้วทิ้ง) — ไม่ต้องไล่ทุกรายการทุกครั้งที่หาคืนก่อน/หลัง
+let dateIdx = null;
+function entriesOn(key) {
+  if (!dateIdx) {
+    dateIdx = new Map();
+    db.entries.forEach(e => { if (!dateIdx.has(e.date)) dateIdx.set(e.date, []); dateIdx.get(e.date).push(e); });
+    queueMicrotask(() => { dateIdx = null; });
+  }
+  return dateIdx.get(key) || [];
+}
+const nightOf = (e, key) => entriesOn(key).find(x => sameStay(x, e));
 function stayOf(e) {  // ทุกคืนของการเข้าพักนี้ (เรียงวัน)
   let start = e.date, end = e.date;
   while (nightOf(e, addDays(start, -1))) start = addDays(start, -1);

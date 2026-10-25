@@ -47,6 +47,7 @@
   @keyframes brpNod{0%,55%,100%{transform:none}68%,82%{transform:translateY(1.8px)}}
   @keyframes brpBubble{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(-3px)}}
   @keyframes brpFlap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
+  .scn.paused *{animation-play-state:paused!important}
   @media (prefers-reduced-motion: reduce){.scn *{animation:none!important}}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
@@ -249,8 +250,24 @@
   </svg>`;
   };
 
-  document.querySelectorAll('[data-scene]').forEach(el => {
+  // data-motion="วินาที" = ขยับแค่ช่วงแรกแล้วหยุด (ประหยัดเครื่อง โดยเฉพาะมือถือ) · "0" = ภาพนิ่ง · ไม่ใส่ = ขยับตลอด
+  // ทุกภาพหยุดขยับเองเมื่อเลื่อนพ้นจอ หรือสลับไปแอป/แท็บอื่น
+  const scenes = [...document.querySelectorAll('[data-scene]')];
+  // หยุด/เล่นด้วย class (ใช้ได้ตั้งแต่ก่อน animation เริ่ม)
+  const sync = el => el.classList.toggle('paused', !!el._stopped || el._visible === false || document.visibilityState !== 'visible');
+  scenes.forEach(el => {
     el.classList.add('scn');
     el.innerHTML = svg(el.dataset.scene || 'full', el.clientWidth < el.clientHeight * 0.8);
+    const sec = el.dataset.motion;
+    if (sec !== undefined) {
+      if (+sec <= 0) el._stopped = true;
+      else setTimeout(() => { el._stopped = true; sync(el); }, +sec * 1000);
+    }
+    sync(el);
   });
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { e.target._visible = e.isIntersecting; sync(e.target); }));
+    scenes.forEach(el => io.observe(el));
+  }
+  document.addEventListener('visibilitychange', () => scenes.forEach(sync));
 })();
