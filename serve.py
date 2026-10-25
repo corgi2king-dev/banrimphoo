@@ -2,7 +2,7 @@
 """บ้านริมภู — เว็บจัดการเช่าที่พัก
 
 รัน:  python3 work/banrimphoo/serve.py [port]   (ค่าเริ่มต้น 8787) → http://127.0.0.1:8787
-ข้อมูล: rooms.json = รายการห้อง · entries/YYYY-MM.json = การจองแยกไฟล์ละเดือน
+ข้อมูล: rooms.json = รายการห้อง · entries/YYYY-MM.json = การจอง · expenses/YYYY-MM.json = ค่าใช้จ่าย (ไฟล์ละเดือน)
        (data.json แบบเก่าจะถูกแยกให้อัตโนมัติตอนเปิด แล้วเปลี่ยนชื่อเป็น data.json.migrated)
 Excel: GET /api/export?period=YYYY-MM หรือ YYYY → ไฟล์ .xlsx (xlsx_export.py)
 ผู้ใช้: auth.json  {"users": {"<ชื่อ>": {"salt", "hash", "iter"}}} — เก็บเฉพาะ hash (PBKDF2-SHA256)
@@ -13,7 +13,7 @@ Excel: GET /api/export?period=YYYY-MM หรือ YYYY → ไฟล์ .xlsx (
   BRP_HOST=127.0.0.1  BRP_PORT=8787   ฟังที่ไหน (อยู่หลัง Caddy → 127.0.0.1)
   BRP_SECURE=1        คุกกี้ส่งผ่าน https เท่านั้น
   BRP_TRUST_PROXY=1   อ่าน IP จริงจาก X-Forwarded-For (ใช้เมื่ออยู่หลัง reverse proxy เท่านั้น)
-สำรองข้อมูล: ก่อนบันทึกครั้งแรกของแต่ละวัน คัดลอก rooms.json + entries/ ไว้ที่ backups/YYYY-MM-DD/ (เก็บ 30 วันล่าสุด)
+สำรองข้อมูล: ก่อนบันทึกครั้งแรกของแต่ละวัน คัดลอก rooms.json + entries/ + expenses/ ไว้ที่ backups/YYYY-MM-DD/ (เก็บ 30 วันล่าสุด)
 """
 import hashlib
 import hmac
@@ -36,6 +36,7 @@ STORE = os.environ.get("BANRIMPHOO_DIR", ROOT)
 DATA = os.path.join(STORE, "data.json")  # รูปแบบเก่า (ไฟล์เดียว) — ใช้แค่ตอนย้ายข้อมูล
 ROOMS = os.path.join(STORE, "rooms.json")
 ENTRIES = os.path.join(STORE, "entries")
+EXPENSES = os.path.join(STORE, "expenses")
 MONTH_FILE = re.compile(r"^\d{4}-\d{2}\.json$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 AUTH = os.path.join(STORE, "auth.json")
@@ -84,33 +85,43 @@ def save_sessions():  # เรียกใน lock
     write_json(SESS, sessions)
 
 
-def month_files():
-    return sorted(f for f in os.listdir(ENTRIES) if MONTH_FILE.match(f)) if os.path.isdir(ENTRIES) else []
+def month_files(folder=ENTRIES):
+    return sorted(f for f in os.listdir(folder) if MONTH_FILE.match(f)) if os.path.isdir(folder) else []
 
 
-def load_db():
-    entries = []
-    for f in month_files():
-        entries += read_json(os.path.join(ENTRIES, f), [])
-    return {"rooms": read_json(ROOMS, []), "entries": entries}
+def load_months(folder):
+    items = []
+    for f in month_files(folder):
+        items += read_json(os.path.join(folder, f), [])
+    return items
 
 
-def save_db(db):
-    """rooms → rooms.json · entries → entries/YYYY-MM.json (เขียนเฉพาะเดือนที่เปลี่ยน, เดือนที่ว่างแล้วลบไฟล์)"""
-    os.makedirs(ENTRIES, exist_ok=True)
-    if read_json(ROOMS, None) != db["rooms"]:
-        write_json(ROOMS, db["rooms"])
+def save_months(folder, items):
+    """เขียนแยกไฟล์ละเดือน folder/YYYY-MM.json — เขียนเฉพาะเดือนที่เปลี่ยน, เดือนที่ว่างแล้วลบไฟล์"""
+    os.makedirs(folder, exist_ok=True)
     by_month = {}
-    for e in db["entries"]:
+    for e in items:
         by_month.setdefault(e["date"][:7], []).append(e)
-    for f in month_files():
+    for f in month_files(folder):
         if f[:7] not in by_month:
-            os.remove(os.path.join(ENTRIES, f))
+            os.remove(os.path.join(folder, f))
     for m, es in by_month.items():
-        path = os.path.join(ENTRIES, f"{m}.json")
+        path = os.path.join(folder, f"{m}.json")
         es.sort(key=lambda e: e["date"])
         if read_json(path, None) != es:
             write_json(path, es)
+
+
+def load_db():
+    return {"rooms": read_json(ROOMS, []), "entries": load_months(ENTRIES), "expenses": load_months(EXPENSES)}
+
+
+def save_db(db):
+    """rooms → rooms.json · entries → entries/ · expenses → expenses/"""
+    if read_json(ROOMS, None) != db["rooms"]:
+        write_json(ROOMS, db["rooms"])
+    save_months(ENTRIES, db["entries"])
+    save_months(EXPENSES, db.get("expenses", []))
 
 
 def migrate():
@@ -130,8 +141,9 @@ def backup_data():
         return
     os.makedirs(dst)
     shutil.copy2(ROOMS, dst)
-    if os.path.isdir(ENTRIES):
-        shutil.copytree(ENTRIES, os.path.join(dst, "entries"))
+    for folder in (ENTRIES, EXPENSES):
+        if os.path.isdir(folder):
+            shutil.copytree(folder, os.path.join(dst, os.path.basename(folder)))
     days = sorted(d for d in os.listdir(BACKUPS) if re.match(r"^\d{4}-\d{2}-\d{2}$", d))
     for old in days[:-KEEP_BACKUPS]:
         shutil.rmtree(os.path.join(BACKUPS, old))
@@ -331,8 +343,12 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/data":
             if not isinstance(body.get("rooms"), list) or not isinstance(body.get("entries"), list):
                 return self._json(400, {"error": "rooms / entries ต้องเป็น list"})
-            if not all(isinstance(e, dict) and DATE.match(str(e.get("date", ""))) for e in body["entries"]):
-                return self._json(400, {"error": "entries ต้องมี date แบบ YYYY-MM-DD"})
+            if "expenses" not in body:  # หน้าเว็บเวอร์ชันเก่า (ยังไม่มีเมนูค่าใช้จ่าย) → ไม่แตะค่าใช้จ่ายเดิม
+                body["expenses"] = load_months(EXPENSES)
+            if not isinstance(body["expenses"], list):
+                return self._json(400, {"error": "expenses ต้องเป็น list"})
+            if not all(isinstance(e, dict) and DATE.match(str(e.get("date", ""))) for e in body["entries"] + body["expenses"]):
+                return self._json(400, {"error": "entries / expenses ต้องมี date แบบ YYYY-MM-DD"})
             with lock:
                 backup_data()
                 save_db(body)

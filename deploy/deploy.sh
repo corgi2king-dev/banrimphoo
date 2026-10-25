@@ -4,7 +4,7 @@
 #   ./deploy.sh <user>@<ip>                               อัปเดตโค้ดอย่างเดียว (ข้อมูลบนเซิร์ฟเวอร์ไม่ถูกแตะ)
 #   ./deploy.sh <user>@<ip> --setup <โดเมน> --with-data    ครั้งแรก: ติดตั้งเซิร์ฟเวอร์ + ย้ายข้อมูลจากเครื่องนี้ขึ้นไป
 #
-# --with-data  คัดลอกข้อมูล (rooms.json + entries/) และ auth.json (บัญชีล็อกอิน) ขึ้นไป
+# --with-data  คัดลอกข้อมูล (rooms.json + entries/ + expenses/) และ auth.json (บัญชีล็อกอิน) ขึ้นไป
 #              เฉพาะเมื่อบนเซิร์ฟเวอร์ยังไม่มีข้อมูล — ไม่เขียนทับของเดิม
 # ต้องมี ssh เข้าเซิร์ฟเวอร์ได้ และ user นั้นใช้ sudo ได้ (ระบบอาจถามรหัส sudo)
 set -euo pipefail
@@ -27,7 +27,7 @@ FILES=("${CODE[@]}")
 [ -f photo.jpg ] && FILES+=(photo.jpg)
 [ -n "$DOMAIN" ] && FILES+=(deploy/setup.sh)
 if [ "$WITH_DATA" = 1 ]; then
-  for f in rooms.json auth.json entries; do [ -e "$f" ] && FILES+=("$f"); done
+  for f in rooms.json auth.json entries expenses; do [ -e "$f" ] && FILES+=("$f"); done
 fi
 
 echo "== อัปโหลด: ${FILES[*]}"
@@ -46,7 +46,9 @@ ssh -t "$TARGET" "set -e
       sudo install -o banrimphoo -g banrimphoo -m 600 rooms.json \$D/
       sudo install -d -o banrimphoo -g banrimphoo -m 700 \$D/entries
       if [ -d entries ]; then sudo install -o banrimphoo -g banrimphoo -m 600 entries/*.json \$D/entries/; fi
-      echo 'ย้ายข้อมูลห้อง/การจองขึ้นแล้ว'
+      sudo install -d -o banrimphoo -g banrimphoo -m 700 \$D/expenses
+      if [ -d expenses ] && ls expenses/*.json >/dev/null 2>&1; then sudo install -o banrimphoo -g banrimphoo -m 600 expenses/*.json \$D/expenses/; fi
+      echo 'ย้ายข้อมูลห้อง/การจอง/ค่าใช้จ่ายขึ้นแล้ว'
     fi
   fi
   if [ -f auth.json ]; then

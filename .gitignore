@@ -3,6 +3,7 @@ data.json
 data.json.migrated
 rooms.json
 entries/
+expenses/
 auth.json
 sessions.json
 backups/

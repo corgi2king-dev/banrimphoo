@@ -2,7 +2,8 @@
 
 build(rooms, entries, title) → bytes ของไฟล์ .xlsx มี 2 ชีต:
   1. รายการเช่า   วันที่ · ห้อง · ประเภท · ผู้เข้าพัก · ค่าเช่า · สถานะ · ช่องทาง · หมายเหตุ (+ แถวรวม)
-  2. สรุปตามห้อง  ห้อง · ประเภท · จำนวนคืน · รายได้ · ชำระแล้ว · ค้างชำระ (+ แถวรวม)
+  2. สรุปตามห้อง  ห้อง · ประเภท · จำนวนคืน · รายได้ · รับเงินแล้ว (รวมมัดจำ) · ค้างชำระ (+ แถวรวม)
+สถานะ: ชำระแล้ว / มัดจำ (deposit > 0 แต่ยังไม่ครบ) / ค้างชำระ
 """
 import datetime as dt
 import io
@@ -75,6 +76,12 @@ def build(rooms, entries, title):
     order = {r.get("id"): i for i, r in enumerate(rooms)}
     es = sorted(entries, key=lambda e: (e.get("date", ""), order.get(e.get("roomId"), 999)))
     amt = lambda e: float(e.get("amount") or 0)  # noqa: E731
+    got = lambda e: amt(e) if e.get("paid") else min(float(e.get("deposit") or 0), amt(e))  # noqa: E731
+
+    def status(e):
+        if e.get("paid"):
+            return "ชำระแล้ว"
+        return f"มัดจำ {got(e):,.0f} · ค้าง {amt(e) - got(e):,.0f}" if got(e) else "ค้างชำระ"
 
     # ชีต 1: รายการ
     head = ["วันที่", "ห้อง", "ประเภท", "ผู้เข้าพัก", "ค่าเช่า (บาท)", "สถานะ", "ช่องทาง", "หมายเหตุ"]
@@ -82,27 +89,27 @@ def build(rooms, entries, title):
     for e in es:
         r = room.get(e.get("roomId"), {})
         rows1.append([(_serial(e["date"]), DATE), (r.get("name", "?"), DUE), (r.get("type", ""), TEXT),
-                      (e.get("guest", ""), TEXT), (amt(e), NUM), ("ชำระแล้ว" if e.get("paid") else "ค้างชำระ", TEXT),
+                      (e.get("guest", ""), TEXT), (amt(e), NUM), (status(e), TEXT),
                       (e.get("channel", ""), TEXT), (e.get("note", ""), TEXT)])
     total = sum(amt(e) for e in es)
     rows1.append([(f"รวม {len(es)} รายการ", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT),
                   (total, TOTAL_NUM), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT)])
 
     # ชีต 2: สรุปตามห้อง
-    head2 = ["ห้อง", "ประเภท", "จำนวนคืน", "รายได้ (บาท)", "ชำระแล้ว (บาท)", "ค้างชำระ (บาท)"]
+    head2 = ["ห้อง", "ประเภท", "จำนวนคืน", "รายได้ (บาท)", "รับเงินแล้ว (บาท)", "ค้างชำระ (บาท)"]
     rows2 = [[(title, TITLE)], [], [(h, HEAD) for h in head2]]
     sums = [0, 0, 0, 0]
     for r in rooms:
         mine = [e for e in es if e.get("roomId") == r.get("id")]
-        paid = sum(amt(e) for e in mine if e.get("paid"))
+        paid = sum(got(e) for e in mine)
         tot = sum(amt(e) for e in mine)
         vals = [len(mine), tot, paid, tot - paid]
         sums = [a + b for a, b in zip(sums, vals)]
         rows2.append([(r.get("name", ""), DUE), (r.get("type", ""), TEXT)] + [(v, NUM) for v in vals])
     rows2.append([("รวม", TOTAL_TXT), ("", TOTAL_TXT)] + [(v, TOTAL_NUM) for v in sums])
 
-    sheets = [("รายการเช่า", _sheet(rows1, [16, 10, 16, 22, 14, 12, 12, 30], 3)),
-              ("สรุปตามห้อง", _sheet(rows2, [12, 16, 12, 15, 16, 16], 3))]
+    sheets = [("รายการเช่า", _sheet(rows1, [16, 10, 16, 22, 14, 22, 12, 30], 3)),
+              ("สรุปตามห้อง", _sheet(rows2, [12, 16, 12, 15, 18, 16], 3))]
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:

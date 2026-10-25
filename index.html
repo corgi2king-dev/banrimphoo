@@ -63,6 +63,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tag.ok{background:var(--accent-soft);color:var(--accent)}
 .tag.off{background:var(--warn-soft);color:var(--warn)}
 .tag.due{background:var(--danger-soft);color:var(--danger)}
+.tag.dep{background:var(--warn-soft);color:var(--warn)}
+select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center}
 .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .empty{color:var(--muted);text-align:center;padding:28px}
 
@@ -98,6 +102,8 @@ svg .col:hover .hit{fill:var(--accent-soft);opacity:.5}
 .tip b{font-size:15px}
 svg .grid{stroke:var(--line)}
 .hbar{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.hbar.guest{grid-template-columns:30px 150px 1fr 120px;cursor:pointer}
+.hbar .rk{font-weight:700;text-align:center;color:var(--muted)}
 .hbar .track{background:var(--bg);border-radius:6px;height:18px;overflow:hidden}
 .hbar .fill{height:100%;border-radius:6px}
 .hbar .val{text-align:right;font-variant-numeric:tabular-nums}
@@ -126,6 +132,7 @@ nav{overflow-x:auto;max-width:100%;scrollbar-width:none}
 nav button{white-space:nowrap}
 
 @media (max-width:640px){
+  .hbar.guest{grid-template-columns:26px 1fr 80px}.hbar.guest .track{display:none}
   nav button{padding:6px 9px;font-size:13.5px}
   .cal .d{min-height:70px;padding:3px}
   .chip{font-size:10px;padding:0 3px}
@@ -143,6 +150,7 @@ nav button{white-space:nowrap}
       <button data-tab="today">🏠 วันนี้</button>
       <button data-tab="rooms">🛏 จัดการห้องพัก</button>
       <button data-tab="calendar">📅 บันทึกค่าเช่า</button>
+      <button data-tab="expenses">🧾 ค่าใช้จ่าย</button>
       <button data-tab="summary">📊 สรุปค่าเช่า</button>
     </nav>
     <div class="user" id="userBox" hidden>
@@ -200,6 +208,22 @@ nav button{white-space:nowrap}
     </div>
   </section>
 
+  <!-- ค่าใช้จ่าย -->
+  <section id="tab-expenses" hidden>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn" id="exPrev">‹</button>
+        <h2 id="exTitle" style="min-width:170px;text-align:center"></h2>
+        <button class="btn" id="exNext">›</button>
+        <button class="btn sm" id="exToday">วันนี้</button>
+        <div class="sp"></div>
+        <div id="exMonthSum" style="font-weight:600;color:var(--danger)"></div>
+      </div>
+      <div class="cal" id="exCal"></div>
+      <div class="legend" id="exLegend" style="margin-top:10px"></div>
+    </div>
+  </section>
+
   <!-- สรุป -->
   <section id="tab-summary" hidden>
     <div class="card row">
@@ -214,6 +238,7 @@ nav button{white-space:nowrap}
       <div class="card"><h3 id="chMonthlyTitle">รายได้รายเดือน</h3><div id="chMonthly"></div></div>
       <div class="card"><h3>รายได้แยกตามห้อง</h3><div id="chRooms"></div></div>
       <div class="card"><h3>สถานะการชำระเงิน</h3><div id="chPaid"></div></div>
+      <div class="card" style="grid-column:1/-1"><h3 id="chGuestsTitle">🏆 ลูกค้าที่เช่าเยอะสุด 10 อันดับ</h3><div id="chGuests"></div></div>
     </div>
   </section>
   <div class="foot" id="foot"></div>
@@ -237,6 +262,26 @@ nav button{white-space:nowrap}
   </div>
 </div>
 
+<!-- modal ค่าใช้จ่ายรายวัน -->
+<div class="mask" id="exMask">
+  <div class="modal">
+    <div class="row"><h2 id="exDayTitle"></h2><div class="sp"></div><button class="x" data-close>×</button></div>
+    <div id="exList" style="margin:10px 0"></div>
+    <form id="exForm" style="border-top:1px solid var(--line);padding-top:12px">
+      <h3 id="exFormTitle">เพิ่มค่าใช้จ่าย</h3>
+      <div class="grid2">
+        <label>หมวด *<select name="cat" required></select></label>
+        <label>จำนวนเงิน (บาท) *<input name="amount" type="number" min="1" step="1" required></label>
+        <label>จ่ายด้วย<select name="channel"><option value="">-</option><option>เงินสด</option><option>โอน</option><option>บัตร</option><option>หักบัญชี</option></select></label>
+      </div>
+      <label style="margin-top:10px">รายละเอียด<input name="note" placeholder="เช่น บิลเดือน ต.ค., ค่าจ้างแม่บ้าน 2 วัน"></label>
+      <div class="row" style="margin-top:14px"><div class="sp"></div>
+        <button type="button" class="btn" id="exCancel" hidden>ยกเลิกแก้ไข</button>
+        <button class="btn pri">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
 <!-- modal วัน -->
 <div class="mask" id="dayMask">
   <div class="modal">
@@ -248,7 +293,8 @@ nav button{white-space:nowrap}
         <label>ห้อง *<select name="roomId" required></select></label>
         <label>ชื่อผู้เข้าพัก<input name="guest"></label>
         <label>ค่าเช่า/คืน (บาท) *<input name="amount" type="number" min="0" step="1" required></label>
-        <label>การชำระเงิน<select name="paid"><option value="1">ชำระแล้ว</option><option value="0">ค้างชำระ</option></select></label>
+        <label>การชำระเงิน<select name="paid"><option value="1">ชำระแล้ว</option><option value="dep">มัดจำ</option><option value="0">ค้างชำระ</option></select></label>
+        <label id="depWrap" hidden>เงินมัดจำ (บาท) *<input name="deposit" type="number" min="1" step="1"></label>
         <label>ช่องทาง<select name="channel"><option value="">-</option><option>เงินสด</option><option>โอน</option><option>Agoda</option><option>Booking</option><option>Airbnb</option><option>อื่น ๆ</option></select></label>
       </div>
       <div id="roomHint" style="font-size:13px;margin-top:6px"></div>
@@ -278,6 +324,7 @@ nav button{white-space:nowrap}
 <div class="mask" id="askMask" style="z-index:30;align-items:center">
   <div class="modal" style="max-width:420px">
     <div id="askMsg" style="white-space:pre-line;font-size:16px"></div>
+    <input id="askInput" type="number" min="0" step="1" hidden style="margin-top:12px">
     <div class="row" style="margin-top:18px"><div class="sp"></div>
       <button type="button" class="btn" id="askNo"></button><button type="button" class="btn pri" id="askYes"></button></div>
   </div>
@@ -308,6 +355,34 @@ let mode = 'local';
 const today = new Date();
 let calY = today.getFullYear(), calM = today.getMonth();
 
+// ---------- การชำระเงิน: ชำระแล้ว / มัดจำ (จ่ายบางส่วน) / ค้างชำระ ----------
+const received = e => e.paid ? (+e.amount || 0) : Math.min(+e.deposit || 0, +e.amount || 0);
+const remaining = e => (+e.amount || 0) - received(e);
+const payState = e => e.paid ? 'ok' : (+e.deposit > 0 ? 'dep' : 'due');
+const payColor = e => ({ ok: roomColor(e.roomId), dep: 'var(--warn)', due: 'var(--danger)' })[payState(e)];
+// dropdown เลือกสถานะ (หน้าตาเป็นป้ายสีตามสถานะ)
+const paySelect = (state, attrs, depTxt) => `<select class="tag ${state} pay" ${attrs} title="เปลี่ยนสถานะการชำระเงิน">
+  <option value="ok"${state === 'ok' ? ' selected' : ''}>ชำระแล้ว ✓</option>
+  <option value="dep"${state === 'dep' ? ' selected' : ''}>${state === 'dep' ? esc(depTxt) : 'มัดจำ…'}</option>
+  <option value="due"${state === 'due' ? ' selected' : ''}>ค้างชำระ</option></select>`;
+// ตั้งสถานะให้ทุกคืนใน nights — มัดจำ: ถามยอด แล้วใส่ให้คืนแรก ๆ ตามลำดับวันจนครบยอด
+async function setPay(nights, v) {
+  if (v === 'ok') nights.forEach(n => Object.assign(n, { paid: true }));
+  else if (v === 'due') nights.forEach(n => Object.assign(n, { paid: false, deposit: 0 }));
+  else {
+    const total = nights.reduce((a, n) => a + (+n.amount || 0), 0);
+    const cur = nights.reduce((a, n) => a + (n.paid ? 0 : received(n)), 0);
+    const amt = await askNumber(`เงินมัดจำ (บาท)\nค่าเช่ารวม ${baht(total)}`, cur || '');
+    if (amt === null) return false;
+    if (!(amt > 0 && amt < total)) { toast('เงินมัดจำต้องมากกว่า 0 และน้อยกว่าค่าเช่ารวม'); return false; }
+    let left = amt;
+    [...nights].sort((a, b) => a.date < b.date ? -1 : 1).forEach(n => {
+      const d = Math.min(left, +n.amount || 0); left -= d; Object.assign(n, { paid: false, deposit: d });
+    });
+  }
+  return true;
+}
+
 // ---------- storage ----------
 async function load() {
   try {
@@ -319,7 +394,7 @@ async function load() {
     mode = 'local';
     try { db = JSON.parse(localStorage.getItem('banrimphoo') || 'null') || db; } catch {}
   }
-  db.rooms ||= []; db.entries ||= [];
+  db.rooms ||= []; db.entries ||= []; db.expenses ||= [];
   // เตือนเฉพาะตอนเปิดไฟล์ตรง ๆ (ไม่ผ่าน serve.py) เพราะข้อมูลจะอยู่แค่ในเบราว์เซอร์นี้
   $('#foot').textContent = mode === 'server' ? '' : 'ไม่ได้เปิดผ่าน serve.py — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น';
 }
@@ -375,7 +450,7 @@ function renderHero() {
   const open = db.rooms.filter(r => r.status !== 'closed').length;
   const booked = new Set(list.map(e => e.roomId)).size;
   const ym = k.slice(0, 7), month = db.entries.filter(e => e.date.startsWith(ym));
-  const due = db.entries.filter(e => !e.paid).reduce((a, e) => a + (+e.amount || 0), 0);
+  const due = db.entries.reduce((a, e) => a + remaining(e), 0);
   $('#heroStats').innerHTML = [
     `🛏 คืนนี้เข้าพัก ${booked}/${open} ห้อง`,
     `💰 เดือนนี้ ${baht(month.reduce((a, e) => a + (+e.amount || 0), 0))}`,
@@ -389,7 +464,7 @@ function show(tab) {
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $$('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
   try { localStorage.setItem('banrimphoo.tab', tab); } catch {}
-  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, summary: renderSummary })[tab]();
+  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: renderSummary })[tab]();
 }
 $$('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
@@ -412,12 +487,21 @@ function ask(msg, yes = 'ตกลง', no = 'ยกเลิก', danger = fals
 function closeAsk(v) { $('#askMask').classList.remove('on'); askResolve?.(v); askResolve = null; }
 $('#askYes').onclick = () => closeAsk(true);
 $('#askNo').onclick = () => closeAsk(false);
+// askNumber(msg, ค่าเริ่ม) → Promise<number|null>
+async function askNumber(msg, val) {
+  const inp = $('#askInput'); inp.hidden = false; inp.value = val;
+  const p = ask(msg, 'บันทึก'); setTimeout(() => { inp.focus(); inp.select(); }, 0);
+  const ok = await p; inp.hidden = true;
+  return ok && inp.value !== '' ? Number(inp.value) : null;
+}
+$('#askInput').onkeydown = e => { if (e.key === 'Enter') closeAsk(true); };
 $('#askMask').addEventListener('mousedown', e => { if (e.target === e.currentTarget) closeAsk(false); });
 
 // ---------- วันนี้ ----------
 // ข้อมูลเก็บเป็นรายคืน → การเข้าพักต่อเนื่อง = คืนติดกัน ห้องเดียวกัน (group เดียวกัน หรือชื่อผู้เข้าพักเดียวกัน)
 const addDays = (key, n) => { const d = parseYmd(key); return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)); };
-const sameStay = (a, b) => a.roomId === b.roomId && (a.group ? a.group === b.group : (a.guest || '') === (b.guest || ''));
+const guestKey = g => (g || '').trim().toLowerCase().replace(/\s+/g, ' ');  // ชื่อเดียวกัน ไม่สนช่องว่าง/ตัวพิมพ์
+const sameStay = (a, b) => a.roomId === b.roomId && (a.group ? a.group === b.group : guestKey(a.guest) === guestKey(b.guest));
 const nightOf = (e, key) => db.entries.find(x => x.date === key && sameStay(x, e));
 function stayOf(e) {  // ทุกคืนของการเข้าพักนี้ (เรียงวัน)
   let start = e.date, end = e.date;
@@ -430,8 +514,12 @@ function stayOf(e) {  // ทุกคืนของการเข้าพั�
 let tdDay = ymd(today);
 const thDate = key => { const d = parseYmd(key); return `${TH_DOW[d.getDay()]}. ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${be(d.getFullYear())}`; };
 const shortTh = key => `${+key.slice(8)} ${TH_MON[+key.slice(5, 7) - 1]}`;
-// ป้ายสถานะชำระของทั้งการเข้าพัก — กดสลับ ชำระแล้ว ⇄ ค้างชำระ (ทุกคืนใน ids)
-const paidTag = (ids, paid) => `<button type="button" class="tag ${paid ? 'ok' : 'due'}" style="border:0;cursor:pointer;font:inherit;font-size:12px" data-tdpay="${ids.join(',')}" data-paid="${paid ? 1 : 0}" title="กดเพื่อสลับสถานะ">${paid ? 'ชำระแล้ว ✓' : 'ค้างชำระ → กดเมื่อชำระ'}</button>`;
+// สถานะชำระของทั้งการเข้าพัก (ทุกคืนใน nights)
+const paidTag = nights => {
+  const paid = nights.every(n => n.paid), dep = nights.reduce((a, n) => a + (n.paid ? 0 : received(n)), 0);
+  const rem = nights.reduce((a, n) => a + remaining(n), 0);
+  return paySelect(paid ? 'ok' : dep ? 'dep' : 'due', `data-tdpay="${nights.map(n => n.id).join(',')}"`, `มัดจำ ${baht(dep)} · ค้าง ${baht(rem)}`);
+};
 
 function renderToday() {
   const key = tdDay, isToday = key === ymd(today), yday = addDays(key, -1);
@@ -442,7 +530,7 @@ function renderToday() {
   const busy = new Set(tonight.map(e => e.roomId));
   const free = open.filter(r => !busy.has(r.id));
   const dueEs = db.entries.filter(e => !e.paid);
-  const dueSum = dueEs.reduce((a, e) => a + (+e.amount || 0), 0);
+  const dueSum = dueEs.reduce((a, e) => a + remaining(e), 0);
 
   $('#tdKpis').innerHTML = [
     ['เข้าพักคืนนี้', `${busy.size}/${open.length} ห้อง`, `รายได้คืนนี้ ${baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0))}`],
@@ -456,7 +544,7 @@ function renderToday() {
     return `<div class="titem"><span class="dot" style="background:${roomColor(e.roomId)}"></span>
       <div class="who"><b>ห้อง ${esc(r?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}</b>
         <span>${st.nights.length} คืน (${shortTh(st.start)} → ออก ${shortTh(st.out)}) · ${baht(st.nights.reduce((a, n) => a + (+n.amount || 0), 0))}${e.channel ? ' · ' + esc(e.channel) : ''}${extra || ''}</span></div>
-      ${paidTag(st.nights.map(n => n.id), !unpaid.length)}</div>`;
+      ${paidTag(st.nights)}</div>`;
   };
   const empty = t => `<div class="empty" style="padding:12px">${t}</div>`;
   // เลื่อนไปดูวันอื่น → ใช้คำว่า "เช็คอิน" + วันที่ แทน "วันนี้"
@@ -473,12 +561,12 @@ function renderToday() {
   });
   $('#tdDue').innerHTML = stays.map(({ e, un }) => `<div class="titem"><span class="dot" style="background:${roomColor(e.roomId)}"></span>
       <div class="who"><b>ห้อง ${esc(roomById(e.roomId)?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}</b>
-        <span>${un.map(n => shortTh(n.date)).join(', ')} · <b style="display:inline;color:var(--danger)">${baht(un.reduce((a, n) => a + (+n.amount || 0), 0))}</b></span></div>
-      ${paidTag(un.map(n => n.id), false)}</div>`).join('') || empty('ไม่มีค้างชำระ 🎉');
+        <span>${un.map(n => shortTh(n.date)).join(', ')} · ค้าง <b style="display:inline;color:var(--danger)">${baht(un.reduce((a, n) => a + remaining(n), 0))}</b>${un.some(n => received(n)) ? ` (มัดจำแล้ว ${baht(un.reduce((a, n) => a + received(n), 0))})` : ''}</span></div>
+      ${paidTag(un)}</div>`).join('') || empty('ไม่มีค้างชำระ 🎉');
 
-  $$('[data-tdpay]').forEach(b => b.onclick = () => {
-    const ids = b.dataset.tdpay.split(',').filter(Boolean), paid = b.dataset.paid !== '1';
-    if (ids.length) { db.entries.forEach(x => { if (ids.includes(x.id)) x.paid = paid; }); save(); }
+  $$('[data-tdpay]').forEach(sel => sel.onchange = async () => {
+    const ids = sel.dataset.tdpay.split(','), nights = db.entries.filter(x => ids.includes(x.id));
+    if (await setPay(nights, sel.value)) save(); else renderToday();
   });
 }
 $('#tdPrev').onclick = () => { tdDay = addDays(tdDay, -1); renderToday(); };
@@ -571,7 +659,7 @@ function renderCal() {
     if (inMonth) monthSum += sum;
     const chips = list.slice(0, 4).map(e => {
       const r = roomById(e.roomId);
-      return `<div class="chip ${e.paid ? '' : 'pend'}" style="background:${e.paid ? roomColor(e.roomId) : 'var(--danger)'}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
+      return `<div class="chip ${e.paid ? '' : 'pend'}" style="background:${payColor(e)}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
     }).join('') + (list.length > 4 ? `<div style="font-size:11px;color:var(--muted)">+${list.length - 4} รายการ</div>` : '');
     html += `<div class="d ${inMonth ? '' : 'other'} ${key === ymd(today) ? 'today' : ''}" data-date="${key}">
       <div class="dn"><span>${d.getDate()}</span>${sum ? `<span class="sum">${baht(sum)}</span>` : ''}</div>${chips}</div>`;
@@ -580,7 +668,7 @@ function renderCal() {
   $('#calMonthSum').textContent = 'รวมเดือนนี้ ' + baht(monthSum);
   $$('#cal .d').forEach(c => c.onclick = () => openDay(c.dataset.date));
   $('#calLegend').innerHTML = db.rooms.map(r => `<span><span class="dot" style="background:${roomColor(r.id)}"></span>${esc(r.name)}</span>`).join('')
-    + (db.rooms.length ? '<span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
+    + (db.rooms.length ? '<span><span class="dot" style="background:var(--warn)"></span>แถบส้ม = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
 }
 $('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } renderCal(); };
 $('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } renderCal(); };
@@ -603,15 +691,15 @@ function renderDayList() {
     const r = roomById(e.roomId);
     return `<tr ${e.id === editingEntry ? 'style="background:var(--accent-soft)"' : ''}><td><span class="dot" style="background:${roomColor(e.roomId)}"></span><b>${esc(r?.name || '?')}</b>
       <div style="font-size:13px;color:var(--muted)">${esc(e.guest || '-')}${e.channel ? ' · ' + esc(e.channel) : ''}${e.note ? ' · ' + esc(e.note) : ''}</div></td>
-      <td class="num">${baht(e.amount)}<div><button type="button" class="tag ${e.paid ? 'ok' : 'due'}" style="border:0;cursor:pointer;font:inherit;font-size:12px" data-epay="${e.id}" title="กดเพื่อสลับสถานะ">${e.paid ? 'ชำระแล้ว ✓' : 'ค้างชำระ → กดเมื่อชำระ'}</button></div></td>
+      <td class="num">${baht(e.amount)}<div>${paySelect(payState(e), `data-epay="${e.id}"`, `มัดจำ ${baht(received(e))} · ค้าง ${baht(remaining(e))}`)}</div></td>
       <td class="num" style="white-space:nowrap"><button class="btn sm" data-eedit="${e.id}">แก้ไข</button> <button class="btn sm dang" data-edel="${e.id}">ลบ</button></td></tr>`;
   }).join('')}</tbody></table>` : '<div class="empty" style="padding:10px">ยังไม่มีรายการในวันนี้</div>')
     + (open.length ? `<div style="font-size:13px;color:var(--muted);margin-top:8px">ห้องว่าง: ${free.length ? esc(free.join(', ')) : 'เต็มทุกห้อง'}</div>` : '');
   $$('[data-eedit]').forEach(b => b.onclick = () => editEntry(b.dataset.eedit));
-  $$('[data-epay]').forEach(b => b.onclick = async () => {
-    const e = db.entries.find(x => x.id === b.dataset.epay);
-    await applyToEntry(e, { paid: !e.paid });
-    save(); renderDayList(); renderCal();
+  $$('[data-epay]').forEach(sel => sel.onchange = async () => {
+    const e = db.entries.find(x => x.id === sel.dataset.epay);
+    if (await setPay(await groupTargets(e), sel.value)) save();
+    renderDayList(); renderCal();
   });
   $$('[data-edel]').forEach(b => b.onclick = async () => {
     if (!await ask('ลบรายการนี้?', 'ลบ', 'ยกเลิก', true)) return;
@@ -646,7 +734,7 @@ function fillRoomSelect(sel) {
 }
 function resetEntryForm() {
   editingEntry = null;
-  const f = $('#entryForm'); f.reset(); delete f.roomId.dataset.cur;
+  const f = $('#entryForm'); f.reset(); delete f.roomId.dataset.cur; syncDeposit();
   fillRoomSelect();
   $('#entryFormTitle').textContent = 'เพิ่มรายการเช่า';
   $('#entryCancel').hidden = true;
@@ -656,25 +744,37 @@ function editEntry(id) {
   const e = db.entries.find(x => x.id === id), f = $('#entryForm');
   editingEntry = id;
   fillRoomSelect(e.roomId);
-  f.guest.value = e.guest || ''; f.amount.value = e.amount; f.paid.value = e.paid ? '1' : '0';
+  f.guest.value = e.guest || ''; f.amount.value = e.amount;
+  f.paid.value = e.paid ? '1' : +e.deposit > 0 ? 'dep' : '0'; f.deposit.value = +e.deposit > 0 ? e.deposit : ''; syncDeposit();
   f.channel.value = e.channel || ''; f.note.value = e.note || '';
   $('#entryFormTitle').textContent = `แก้ไขรายการ: ${roomById(e.roomId)?.name || '?'}${e.guest ? ' · ' + e.guest : ''}`;
   $('#entryCancel').hidden = false;
   renderDayList(); f.paid.focus();
 }
 // จองหลายคืน (group เดียวกัน) → ถามว่าจะใช้กับทุกคืนไหม
-async function applyToEntry(e, patch) {
+async function groupTargets(e) {
   const sibs = e.group ? db.entries.filter(x => x.group === e.group && x.id !== e.id) : [];
-  const targets = sibs.length && await ask(`รายการนี้เป็นการจอง ${sibs.length + 1} คืน — ใช้กับทุกคืนของการจองนี้ไหม?`, 'ทุกคืน', 'เฉพาะวันนี้') ? [e, ...sibs] : [e];
-  targets.forEach(t => Object.assign(t, patch));
+  return sibs.length && await ask(`รายการนี้เป็นการจอง ${sibs.length + 1} คืน — ใช้กับทุกคืนของการจองนี้ไหม?`, 'ทุกคืน', 'เฉพาะวันนี้') ? [e, ...sibs] : [e];
+}
+async function applyToEntry(e, patch) {
+  (await groupTargets(e)).forEach(t => Object.assign(t, patch));
 }
 $('#entryCancel').onclick = () => { resetEntryForm(); renderDayList(); };
+// เลือก "มัดจำ" → แสดงช่องจำนวนเงินมัดจำ
+function syncDeposit() {
+  const f = $('#entryForm'), on = f.paid.value === 'dep';
+  $('#depWrap').hidden = !on; f.deposit.required = on;
+  if (!on) f.deposit.value = '';
+}
+$('#entryForm').paid.onchange = () => { syncDeposit(); if ($('#entryForm').paid.value === 'dep') $('#entryForm').deposit.focus(); };
 $('#entryForm').roomId.onchange = e => { e.target.dataset.cur = e.target.value; if (!editingEntry) $('#entryForm').amount.value = roomById(e.target.value)?.price || ''; };
 $('#entryForm').onsubmit = async ev => {
   ev.preventDefault();
   const f = ev.target;
   const base = { roomId: f.roomId.value, guest: f.guest.value.trim(), amount: Number(f.amount.value) || 0,
-    paid: f.paid.value === '1', channel: f.channel.value, note: f.note.value.trim() };
+    paid: f.paid.value === '1', deposit: f.paid.value === 'dep' ? Number(f.deposit.value) || 0 : 0,
+    channel: f.channel.value, note: f.note.value.trim() };
+  if (f.paid.value === 'dep' && base.deposit >= base.amount) return toast('เงินมัดจำต้องน้อยกว่าค่าเช่า — ถ้าจ่ายครบให้เลือก "ชำระแล้ว"');
   if (editingEntry) {
     await applyToEntry(db.entries.find(x => x.id === editingEntry), base);
   } else {
@@ -684,6 +784,86 @@ $('#entryForm').onsubmit = async ev => {
     db.entries.push({ id: uid(), date: curDay, ...base });
   }
   save(); resetEntryForm(); renderDayList(); renderCal();
+};
+
+// ---------- ค่าใช้จ่าย (ปฏิทินเหมือนบันทึกค่าเช่า) ----------
+const EX_CATS = [['ค่าน้ำ', '--c2'], ['ค่าไฟ', '--c3'], ['ค่าแม่บ้าน', '--c4'], ['ค่าซ่อมแซม', '--c5'],
+  ['ค่าของใช้ในห้อง', '--c6'], ['ค่าอินเทอร์เน็ต', '--c7'], ['อื่น ๆ', '--c8']];
+const exColor = cat => `var(${(EX_CATS.find(c => c[0] === cat) || EX_CATS[EX_CATS.length - 1])[1]})`;
+let exY = today.getFullYear(), exM = today.getMonth(), exDay = null, editingEx = null;
+function renderExCal() {
+  $('#exTitle').textContent = `${TH_MONTHS[exM]} ${be(exY)}`;
+  const first = new Date(exY, exM, 1), start = new Date(exY, exM, 1 - first.getDay());
+  const byDate = {};
+  db.expenses.forEach(e => (byDate[e.date] ||= []).push(e));
+  const cells = Math.ceil((first.getDay() + new Date(exY, exM + 1, 0).getDate()) / 7) * 7;
+  let html = TH_DOW.map(d => `<div class="h">${d}</div>`).join(''), monthSum = 0;
+  const byCat = {};
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const key = ymd(d), list = byDate[key] || [], inMonth = d.getMonth() === exM;
+    const sum = list.reduce((a, e) => a + (+e.amount || 0), 0);
+    if (inMonth) { monthSum += sum; list.forEach(e => byCat[e.cat] = (byCat[e.cat] || 0) + (+e.amount || 0)); }
+    const chips = list.slice(0, 4).map(e => `<div class="chip" style="background:${exColor(e.cat)}" title="${esc(e.cat + ' ' + baht(e.amount) + (e.note ? ' · ' + e.note : ''))}">${esc(e.cat)} ${baht(e.amount)}</div>`).join('')
+      + (list.length > 4 ? `<div style="font-size:11px;color:var(--muted)">+${list.length - 4} รายการ</div>` : '');
+    html += `<div class="d ${inMonth ? '' : 'other'} ${key === ymd(today) ? 'today' : ''}" data-exdate="${key}">
+      <div class="dn"><span>${d.getDate()}</span>${sum ? `<span class="sum" style="color:var(--danger)">${baht(sum)}</span>` : ''}</div>${chips}</div>`;
+  }
+  $('#exCal').innerHTML = html;
+  $('#exMonthSum').textContent = 'รวมเดือนนี้ ' + baht(monthSum);
+  $$('#exCal .d').forEach(c => c.onclick = () => openExDay(c.dataset.exdate));
+  $('#exLegend').innerHTML = EX_CATS.map(([c]) => `<span><span class="dot" style="background:${exColor(c)}"></span>${c}${byCat[c] ? ` <b>${baht(byCat[c])}</b>` : ''}</span>`).join('')
+    + Object.keys(byCat).filter(c => !EX_CATS.some(x => x[0] === c)).map(c => `<span>${esc(c)} <b>${baht(byCat[c])}</b></span>`).join('');
+}
+$('#exPrev').onclick = () => { if (--exM < 0) { exM = 11; exY--; } renderExCal(); };
+$('#exNext').onclick = () => { if (++exM > 11) { exM = 0; exY++; } renderExCal(); };
+$('#exToday').onclick = () => { exY = today.getFullYear(); exM = today.getMonth(); renderExCal(); };
+
+function openExDay(date) {
+  exDay = date; resetExForm();
+  $('#exDayTitle').textContent = '🧾 ' + thDate(date);
+  renderExList();
+  $('#exMask').classList.add('on');
+}
+function renderExList() {
+  const list = db.expenses.filter(e => e.date === exDay);
+  $('#exList').innerHTML = list.length ? `<table><tbody>${list.map(e => `<tr ${e.id === editingEx ? 'style="background:var(--accent-soft)"' : ''}>
+      <td><span class="dot" style="background:${exColor(e.cat)}"></span><b>${esc(e.cat)}</b>
+        <div style="font-size:13px;color:var(--muted)">${esc(e.note || '-')}${e.channel ? ' · ' + esc(e.channel) : ''}</div></td>
+      <td class="num" style="color:var(--danger);font-weight:600">${baht(e.amount)}</td>
+      <td class="num" style="white-space:nowrap"><button class="btn sm" data-exedit="${e.id}">แก้ไข</button> <button class="btn sm dang" data-exdel="${e.id}">ลบ</button></td></tr>`).join('')}
+      <tr><td><b>รวม</b></td><td class="num" style="color:var(--danger);font-weight:700">${baht(list.reduce((a, e) => a + (+e.amount || 0), 0))}</td><td></td></tr></tbody></table>`
+    : '<div class="empty" style="padding:10px">ยังไม่มีค่าใช้จ่ายในวันนี้</div>';
+  $$('[data-exedit]').forEach(b => b.onclick = () => editEx(b.dataset.exedit));
+  $$('[data-exdel]').forEach(b => b.onclick = async () => {
+    if (!await ask('ลบค่าใช้จ่ายนี้?', 'ลบ', 'ยกเลิก', true)) return;
+    db.expenses = db.expenses.filter(e => e.id !== b.dataset.exdel);
+    if (editingEx === b.dataset.exdel) resetExForm();
+    save(); renderExList(); renderExCal();
+  });
+}
+function resetExForm() {
+  editingEx = null;
+  const f = $('#exForm'); f.reset();
+  f.cat.innerHTML = EX_CATS.map(([c]) => `<option>${c}</option>`).join('');
+  $('#exFormTitle').textContent = 'เพิ่มค่าใช้จ่าย'; $('#exCancel').hidden = true;
+}
+function editEx(id) {
+  const e = db.expenses.find(x => x.id === id), f = $('#exForm');
+  resetExForm(); editingEx = id;
+  if (!EX_CATS.some(c => c[0] === e.cat)) f.cat.insertAdjacentHTML('beforeend', `<option>${esc(e.cat)}</option>`);
+  f.cat.value = e.cat; f.amount.value = e.amount; f.channel.value = e.channel || ''; f.note.value = e.note || '';
+  $('#exFormTitle').textContent = `แก้ไข: ${e.cat}`; $('#exCancel').hidden = false;
+  renderExList(); f.amount.focus();
+}
+$('#exCancel').onclick = () => { resetExForm(); renderExList(); };
+$('#exForm').onsubmit = ev => {
+  ev.preventDefault();
+  const f = ev.target;
+  const x = { cat: f.cat.value, amount: Number(f.amount.value) || 0, channel: f.channel.value, note: f.note.value.trim() };
+  if (editingEx) Object.assign(db.expenses.find(e => e.id === editingEx), x);
+  else db.expenses.push({ id: uid(), date: exDay, ...x });
+  save(); resetExForm(); renderExList(); renderExCal();
 };
 
 // ---------- summary ----------
@@ -719,6 +899,7 @@ function renderSummary(keep) {
   const days = m === null ? ((y % 4 === 0 && y % 100) || y % 400 === 0 ? 366 : 365) : new Date(y, m + 1, 0).getDate();
   const total = sel.reduce((a, e) => a + (+e.amount || 0), 0);
   const paid = sel.filter(e => e.paid).reduce((a, e) => a + (+e.amount || 0), 0);
+  const dep = sel.filter(e => !e.paid).reduce((a, e) => a + received(e), 0), got = paid + dep;
   const nights = sel.length;
   const openRooms = db.rooms.filter(r => r.status !== 'closed').length || db.rooms.length;
   const occ = openRooms ? nights / (openRooms * days) * 100 : 0;
@@ -726,7 +907,7 @@ function renderSummary(keep) {
 
   $('#kpis').innerHTML = [
     ['รายได้รวม', baht(total), period],
-    ['ชำระแล้ว', baht(paid), `<span style="color:var(--danger)">ค้างชำระ ${baht(total - paid)}</span>`],
+    ['รับเงินแล้ว', baht(got), `${dep ? `รวมมัดจำ ${baht(dep)} · ` : ''}<span style="color:var(--danger)">ค้างชำระ ${baht(total - got)}</span>`],
     ['จำนวนคืนที่เข้าพัก', nights.toLocaleString('th-TH') + ' คืน', `${new Set(sel.map(e => e.guest).filter(Boolean)).size} ผู้เข้าพัก`],
     ['อัตราเข้าพัก', occ.toFixed(1) + '%', `${openRooms} ห้อง × ${days} วัน`],
     ['เฉลี่ยต่อคืน', baht(nights ? total / nights : 0), 'ADR'],
@@ -759,8 +940,32 @@ function renderSummary(keep) {
 
   $('#chPaid').innerHTML = donut([
     ['ชำระแล้ว', paid, 'var(--accent)'],
-    ['ค้างชำระ', total - paid, 'var(--danger)'],
+    ['มัดจำ', dep, 'var(--warn)'],
+    ['ค้างชำระ', total - got, 'var(--danger)'],
   ], baht(total));
+
+  // ลูกค้าที่เช่าเยอะสุด: รวมตามชื่อผู้เข้าพัก (ไม่สนช่องว่าง/ตัวพิมพ์) เรียงตามจำนวนคืน แล้วตามยอดเงิน
+  const gmap = new Map();
+  sel.forEach(e => {
+    const name = (e.guest || '').trim();
+    if (!name) return;
+    const k = guestKey(name);
+    const g = gmap.get(k) || { name, nights: 0, sum: 0, visits: 0, rooms: new Set(), last: '' };
+    g.nights++; g.sum += +e.amount || 0; g.rooms.add(roomById(e.roomId)?.name || '?');
+    if (!nightOf(e, addDays(e.date, -1))) g.visits++;  // คืนแรกของการเข้าพัก = มา 1 ครั้ง
+    if (e.date > g.last) g.last = e.date;
+    gmap.set(k, g);
+  });
+  const top = [...gmap.values()].sort((a, b) => b.nights - a.nights || b.sum - a.sum).slice(0, 10);
+  const noName = sel.filter(e => !(e.guest || '').trim()).length, maxN = Math.max(1, ...top.map(g => g.nights));
+  const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
+  $('#chGuestsTitle').textContent = `🏆 ลูกค้าที่เช่าเยอะสุด 10 อันดับ · ${period}`;
+  $('#chGuests').innerHTML = (top.length ? top.map((g, i) => `<div class="hbar guest" data-tip="${esc(g.name)}|${g.nights} คืน · ${baht(g.sum)}|มา ${g.visits} ครั้ง · ห้อง ${esc([...g.rooms].join(', '))} · ล่าสุด ${shortTh(g.last)}">
+      <div class="rk">${medal(i)}</div><div class="nm"><b>${esc(g.name)}</b><div style="font-size:11px;color:var(--muted)">มา ${g.visits} ครั้ง</div></div>
+      <div class="track"><div class="fill" style="width:${g.nights / maxN * 100}%;background:var(--accent)"></div></div>
+      <div class="val"><b>${g.nights} คืน</b><div style="font-size:11px;color:var(--muted)">${baht(g.sum)}</div></div></div>`).join('')
+    : '<div class="empty">ยังไม่มีข้อมูลผู้เข้าพักในช่วงนี้</div>')
+    + (noName ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">ไม่นับ ${noName} คืนที่ไม่ได้ใส่ชื่อผู้เข้าพัก</div>` : '');
 }
 
 function barChart(labels, vals, tip, every = 1, fmt = baht, hi = null) {
