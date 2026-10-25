@@ -6,8 +6,8 @@
   // หน้าเว็บ — ทุกคำขอผ่าน Worker ก่อน (เช็กล็อกอิน) แล้วค่อยส่งไฟล์จาก public/
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "d1_databases": [
-    // database_id: ได้จากคำสั่ง  npx wrangler d1 create banrimphoo  แล้วนำมาใส่แทน
-    { "binding": "DB", "database_name": "banrimphoo", "database_id": "00000000-0000-0000-0000-000000000000" }
+    // ฐานข้อมูล D1 บน Cloudflare (สร้างแล้ว, region APAC) — database_id ไม่ใช่ความลับ
+    { "binding": "DB", "database_name": "banrimphoo", "database_id": "37204096-0b86-45b8-82d0-a3f83900aed0" }
   ],
   "observability": { "enabled": true }
 }
