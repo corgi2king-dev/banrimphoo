@@ -1,5 +1,8 @@
 # ข้อมูลจริง + บัญชีล็อกอิน — ห้ามขึ้น git
 data.json
+data.json.migrated
+rooms.json
+entries/
 auth.json
 sessions.json
 backups/

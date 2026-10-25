@@ -32,8 +32,7 @@
   .scn .bird .w{transform-box:fill-box;transform-origin:50% 100%;animation:brpFlap .5s ease-in-out infinite alternate}
   .scn .smoke{animation:brpSmoke 5s ease-out infinite;opacity:0}
   .scn .bob{animation:brpBob 2.6s ease-in-out infinite}
-  .scn .wave{transform-box:fill-box;transform-origin:50% 100%;animation:brpWave 1.6s ease-in-out infinite}
-  .scn .wave.w2{animation-delay:-.8s}
+  .scn .nod{animation:brpNod 5s ease-in-out infinite}
   .scn .bubble{animation:brpBubble 9s ease-in-out infinite}
   @media (prefers-color-scheme: dark){.scn .ppl{filter:brightness(.85)}}
   @keyframes brpDrift{from{transform:translateX(-300px)}to{transform:translateX(1700px)}}
@@ -45,7 +44,7 @@
   @keyframes brpWin{0%{opacity:1}70%{opacity:.35}85%{opacity:1}}
   @keyframes brpFly{from{transform:translate(-120px,0)}50%{transform:translate(800px,-30px)}to{transform:translate(1700px,10px)}}
   @keyframes brpBob{50%{transform:translateY(-1.5px)}}
-  @keyframes brpWave{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(22deg)}}
+  @keyframes brpNod{0%,55%,100%{transform:none}68%,82%{transform:translateY(1.8px)}}
   @keyframes brpBubble{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(-3px)}}
   @keyframes brpFlap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
   @media (prefers-reduced-motion: reduce){.scn *{animation:none!important}}`;
@@ -97,47 +96,69 @@
     return g;
   };
 
-  // เจ้าของห้องเช่า (การ์ตูน) ยืนโบกมือ — พิกัด: เท้าที่ y=0
-  const SKIN_M = '#e2b48c', SKIN_W = '#efc6a0', HAIR = '#2f2b2c';
-  const face = (cy, skin, lip) => `
-    <circle cx="-5" cy="${cy + 1}" r="1.2" fill="#222"/><circle cx="5" cy="${cy + 1}" r="1.2" fill="#222"/>
-    <circle cx="-7" cy="${cy + 5}" r="2.2" fill="#e8846f" opacity=".28"/><circle cx="7" cy="${cy + 5}" r="2.2" fill="#e8846f" opacity=".28"/>
-    <path d="M0 ${cy + 2}q1.6 2.6 0 3.4" stroke="#b9875f" stroke-width="1" fill="none"/>
-    <path d="M-3 ${cy + 7}q3 2 6 0" stroke="${lip}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+  // เจ้าของห้องเช่า (การ์ตูน วาดตามรูปจริง) ยืนไหว้ต้อนรับ — พิกัด: เท้าที่ y=0
+  const line = (d, c, w) => `<path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  // แขนไหว้: ต้นแขนเป็นแขนเสื้อ ปลายแขนเป็นผิว มือประนมกลางอก
+  const wai = (sx, sy, sleeve, skin, palm) => [1, -1].map(k =>
+    line(`M${-sx * k} ${sy} L${-(sx + 1) * k} ${sy + 10}`, sleeve, 6.5) + line(`M${-(sx + 1) * k} ${sy + 10} L${-2.4 * k} ${sy + 4}`, skin, 4.4)).join('')
+    + `<ellipse cx="0" cy="${sy + 1.5}" rx="3" ry="5.6" fill="${skin}"/>` + line(`M0 ${sy - 3.5}v9.5`, palm, .8);
+  const SKIN_M = '#d6a078', SKIN_W = '#ecc29c';
   const man = () => `<g class="ppl"><g class="bob">
     <ellipse cx="0" cy="0" rx="15" ry="3" fill="#000" opacity=".15"/>
-    ${R(-8, -24, 7, 22, '#30343a')}${R(1, -24, 7, 22, '#30343a')}${R(-9.5, -3, 9, 3.5, '#1c1e21', 'rx="1.5"')}${R(0.5, -3, 9, 3.5, '#1c1e21', 'rx="1.5"')}
-    ${R(-16, -40, 6, 18, '#7c7f71', 'rx="3"')}<circle cx="-13" cy="-21" r="3" fill="${SKIN_M}"/>
-    ${R(-11, -43, 22, 21, '#7c7f71', 'rx="5"')}${R(-11, -30, 22, 4, '#000', 'opacity=".06"')}
-    <path d="M-5.5 -43L0 -37.5L5.5 -43Z" fill="#9a9d8f"/><path d="M0 -37.5v7" stroke="#62655a" stroke-width="1"/>
-    <circle cx="0" cy="-35" r=".8" fill="#4a4c44"/><circle cx="0" cy="-32" r=".8" fill="#4a4c44"/>
-    <g class="wave">${R(10, -57, 6, 18, '#7c7f71', 'rx="3"')}<circle cx="13" cy="-58" r="3.2" fill="${SKIN_M}"/></g>
-    ${R(-3, -47, 6, 5, SKIN_M)}
-    <circle cx="-11.5" cy="-55" r="2.6" fill="${SKIN_M}"/><circle cx="11.5" cy="-55" r="2.6" fill="${SKIN_M}"/>
-    <ellipse cx="0" cy="-56" rx="11" ry="12.5" fill="${SKIN_M}"/>
-    <path d="M-11.3 -57C-12.5 -68 -4 -71.5 1 -71C8 -71 12.5 -66 11.3 -57C10 -62.5 6 -64.5 2 -63.5C-3 -65.5 -8 -63.5 -11.3 -57Z" fill="#3a3a3c"/>
-    <path d="M-6 -66q4 -2.5 9 -1.5M4 -67q3 .5 5 2.5" stroke="#77777a" stroke-width="1" fill="none"/>
-    <path d="M-7.5 -59.5h4.5M3 -59.5h4.5" stroke="#2a2a2a" stroke-width="1.4" stroke-linecap="round"/>
-    ${face(-57, SKIN_M, '#8a4b3a')}</g></g>`;
-  const flowers = [[-6, -36], [3, -38], [-2, -30], [6, -27], [-8, -25], [1, -24], [8, -33]]
-    .map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="1.7" fill="${i % 2 ? '#fff' : '#7a58b8'}" opacity=".85"/>`).join('');
+    ${R(-8, -27, 7, 25, '#2e3238')}${R(1, -27, 7, 25, '#2e3238')}${R(-9.5, -3, 9, 3.5, '#1c1e21', 'rx="1.5"')}${R(0.5, -3, 9, 3.5, '#1c1e21', 'rx="1.5"')}
+    <path d="M-12 -46Q-13.5 -36 -12.5 -26H12.5Q13.5 -36 12 -46Q0 -49 -12 -46Z" fill="#7b7e72"/>${R(-12.5, -29, 25, 3, '#000', 'opacity=".08"')}
+    <path d="M-7 -47.2L-1 -41.5L-2.5 -47.6ZM7 -47.2L1 -41.5L2.5 -47.6Z" fill="#55584f"/>${R(-1, -44, 2, 7, '#6a6d62')}
+    <circle cx="0" cy="-40" r=".7" fill="#3f413a"/><circle cx="0" cy="-37.5" r=".7" fill="#3f413a"/>
+    <path d="M-9 -36q4 2 8 0M2 -33q4 1.5 7 0" stroke="#fff" stroke-opacity=".12" stroke-width="2" fill="none"/>
+    ${wai(11, -45, '#7b7e72', SKIN_M, '#b07f58')}
+    ${R(-3, -53, 6, 7, SKIN_M)}
+    <g class="nod">
+      <ellipse cx="-9.8" cy="-62" rx="2.3" ry="3.4" fill="${SKIN_M}"/><ellipse cx="9.8" cy="-62" rx="2.3" ry="3.4" fill="${SKIN_M}"/>
+      <path d="M-9.5 -64C-9.5 -72 -5 -75 0 -75C5 -75 9.5 -72 9.5 -64C9.5 -57 7 -51.5 0 -51C-7 -51.5 -9.5 -57 -9.5 -64Z" fill="${SKIN_M}"/>
+      <path d="M-9.9 -64C-11.5 -74.5 -6 -81 1 -80.6C8 -80.2 11.6 -75 9.9 -64C9.2 -68.8 7.2 -71.6 4.2 -72.2C1 -73.2 -3 -72.4 -6 -71.4C-8.2 -70.3 -9.4 -67.4 -9.9 -64Z" fill="#1f1e20"/>
+      ${line('M-6 -77.5q4.5 -2.6 10 -1.4M-3 -73.4q3 -2.2 7 -2.2', '#4a4a4f', 1)}
+      ${line('M-9.6 -66q.2 -2 .9 -3.4M9.6 -66q-.2 -2 -.9 -3.4', '#77777b', .9)}
+      ${line('M-7.2 -66.2q2.6 -1.3 5 -.3M2.2 -66.5q2.5 -1 5 .3', '#1f1f1f', 1.4)}
+      <ellipse cx="-4.7" cy="-62.7" rx="1.6" ry="1.05" fill="#1a1a1a"/><ellipse cx="4.7" cy="-62.7" rx="1.6" ry="1.05" fill="#1a1a1a"/>
+      ${line('M-6.8 -63.4q2.1 -1.2 4.2 0M2.6 -63.4q2.1 -1.2 4.2 0', '#5a3a26', .8)}
+      ${line('M-.2 -63L-1.3 -58.4Q0 -57.5 1.5 -58.2', '#a06f49', .9)}
+      ${line('M-2.9 -55.3q2.9 1 5.8 0', '#6e3d2f', 1.3)}
+    </g></g></g>`;
+  // ลายดอกเสื้อ: กลีบม่วง/ขาว + ใบเขียว (ตัดในรูปเสื้อด้วย clipPath)
+  const flower = (x, y, r, c) => [0, 1, 2, 3, 4].map(i => {
+    const a = i * 72 * Math.PI / 180; return `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${r * .75}" fill="${c}"/>`;
+  }).join('') + `<circle cx="${x}" cy="${y}" r="${r * .5}" fill="#f4e7a8"/>`;
+  const BLOUSE = 'M-12.5 -45Q-15 -34 -14 -24H14Q15 -34 12.5 -45Q0 -48 -12.5 -45Z';
   const woman = () => `<g class="ppl"><g class="bob" style="animation-delay:-1.3s">
-    <ellipse cx="0" cy="0" rx="14" ry="3" fill="#000" opacity=".15"/>
-    ${R(-7, -22, 6, 20, '#3b3442')}${R(1, -22, 6, 20, '#3b3442')}${R(-8.5, -3, 8, 3.5, '#1c1e21', 'rx="1.5"')}${R(0.5, -3, 8, 3.5, '#1c1e21', 'rx="1.5"')}
-    <g class="wave w2">${R(-16, -56, 6, 17, '#b7a3dc', 'rx="3"')}<circle cx="-13" cy="-57" r="3" fill="${SKIN_W}"/></g>
-    ${R(10, -40, 6, 17, '#b7a3dc', 'rx="3"')}<circle cx="13" cy="-22" r="2.8" fill="${SKIN_W}"/>
-    <path d="M-10 -41Q-12.5 -31 -12.5 -21H12.5Q12.5 -31 10 -41Q0 -44 -10 -41Z" fill="#b7a3dc"/>${flowers}
-    <path d="M7 -42L-7 -23" stroke="#222" stroke-width="1.5"/>
-    ${R(-2.5, -45, 5, 5, SKIN_W)}
-    <path d="M-12 -52C-14 -66 -6 -71.5 0 -71.5C7 -71.5 14 -66 12 -52C12 -46 9.5 -43.5 8 -43.5L-8 -43.5C-10 -44.5 -12 -47 -12 -52Z" fill="${HAIR}"/>
-    <ellipse cx="0" cy="-55" rx="10" ry="11" fill="${SKIN_W}"/>
-    <path d="M-10.2 -55.5C-10.5 -66 -2 -68.5 3 -67.5C8 -66.5 11 -61.5 10.2 -55C7 -60 2 -62 -3 -61C-6.5 -60 -8.5 -58 -10.2 -55.5Z" fill="${HAIR}"/>
-    <path d="M-7 -58.5q2 -1 4 0M3 -58.5q2 -1 4 0" stroke="#2a2a2a" stroke-width="1.1" fill="none" stroke-linecap="round"/>
-    ${face(-56.5, SKIN_W, '#b5605a')}</g></g>`;
+    <defs><clipPath id="brpBlouse"><path d="${BLOUSE}"/></clipPath></defs>
+    <ellipse cx="0" cy="0" rx="15" ry="3" fill="#000" opacity=".15"/>
+    ${R(-7.5, -25, 6.5, 23, '#3a3340')}${R(1, -25, 6.5, 23, '#3a3340')}${R(-9, -3, 8.5, 3.5, '#1c1e21', 'rx="1.5"')}${R(0.5, -3, 8.5, 3.5, '#1c1e21', 'rx="1.5"')}
+    <path d="${BLOUSE}" fill="#b9a5de"/>
+    <g clip-path="url(#brpBlouse)">
+      <ellipse cx="-9" cy="-30" rx="4" ry="1.6" fill="#6f9e6a" transform="rotate(-30 -9 -30)"/><ellipse cx="8" cy="-38" rx="4" ry="1.6" fill="#6f9e6a" transform="rotate(25 8 -38)"/>
+      ${flower(-6, -37, 2.6, '#7a57c0')}${flower(7, -29, 3, '#5d4bab')}${flower(-10, -27, 2.2, '#fff')}${flower(2, -42, 2, '#fff')}${flower(11, -42, 2.2, '#8e6fd0')}${flower(-1, -27, 1.8, '#fff')}
+    </g>
+    <path d="M-4.2 -46.6L0 -40.8L4.2 -46.6Z" fill="${SKIN_W}"/>
+    ${line('M9.5 -46L-11 -27', '#1d1d1f', 1.6)}
+    ${wai(12.5, -44, '#b9a5de', SKIN_W, '#c79870')}
+    ${R(-2.8, -51, 5.6, 6, SKIN_W)}
+    <g class="nod" style="animation-delay:-.4s">
+      <path d="M-12.3 -58C-14.5 -71 -7 -77 0 -77C8 -77 14.5 -71 12.3 -58C12.6 -53 11.2 -50.2 9 -49.6C6 -49.4 -6 -49.4 -9 -49.6C-11.6 -50.6 -12.6 -54 -12.3 -58Z" fill="#2d2527"/>
+      <ellipse cx="0" cy="-59.5" rx="9.8" ry="10.6" fill="${SKIN_W}"/>
+      <path d="M-10.6 -58.6C-11 -69 -4 -73.2 3 -72.6C8.2 -72 11.2 -68 10.9 -60.8C9.2 -65 6.6 -66.6 4.2 -66C1 -63.4 -4.6 -61.8 -10.6 -58.6Z" fill="#29232a"/>
+      ${line('M-8 -64q4 -4 10 -5.6M4 -70.5q4 .8 6 4', '#4b4247', .9)}
+      ${line('M-6.8 -63q2.3 -1 4.5 0M2.3 -63q2.3 -1 4.5 0', '#2a2426', 1.1)}
+      <ellipse cx="-4.4" cy="-59.6" rx="1.45" ry="1.15" fill="#1a1a1a"/><ellipse cx="4.4" cy="-59.6" rx="1.45" ry="1.15" fill="#1a1a1a"/>
+      <circle cx="-4" cy="-60" r=".4" fill="#fff"/><circle cx="4.8" cy="-60" r=".4" fill="#fff"/>
+      ${line('M-6.4 -60.4q2 -1.3 4 0M2.4 -60.4q2 -1.3 4 0', '#3a2a24', .8)}
+      <ellipse cx="-6.3" cy="-56.2" rx="2.4" ry="1.5" fill="#e07f6c" opacity=".2"/><ellipse cx="6.3" cy="-56.2" rx="2.4" ry="1.5" fill="#e07f6c" opacity=".2"/>
+      ${line('M-.2 -59L-.9 -55.8Q0 -55.2 1.1 -55.7', '#b48660', .8)}
+      ${line('M-3 -53.1q3 1.5 6 0', '#a55550', 1.3)}
+    </g></g></g>`;
   const owners = welcome => `
-    <g transform="translate(296 14)">${man()}</g><g transform="translate(330 14)">${woman()}</g>
-    ${welcome ? `<g class="bubble"><path d="M276 -112h76a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-34l-6 7-2-7h-34a8 8 0 0 1-8-8v-14a8 8 0 0 1 8-8Z" fill="#fff" stroke="#d5d9db"/>
-      <text x="314" y="-93" text-anchor="middle" font-size="12" font-weight="700" fill="#2f6b4f" font-family="-apple-system,'Noto Sans Thai',sans-serif">ยินดีต้อนรับ</text></g>` : ''}`;
+    <g transform="translate(290 14) scale(1.3)">${man()}</g><g transform="translate(332 14) scale(1.3)">${woman()}</g>
+    ${welcome ? `<g class="bubble"><path d="M281 -134h76a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-34l-6 7-2-7h-34a8 8 0 0 1-8-8v-14a8 8 0 0 1 8-8Z" fill="#fff" stroke="#d5d9db"/>
+      <text x="319" y="-115" text-anchor="middle" font-size="12" font-weight="700" fill="#2f6b4f" font-family="-apple-system,'Noto Sans Thai',sans-serif">ยินดีต้อนรับ</text></g>` : ''}`;
 
   // อาคารทั้งหลัง พิกัดภายใน: พื้น y=0, กว้าง ~ -40..680
   const building = welcome => {

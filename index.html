@@ -179,6 +179,7 @@ svg .grid{stroke:var(--line)}
       <h2>สรุปค่าเช่า</h2><div class="sp"></div>
       <label style="width:auto">ปี <select id="sumYear" style="width:auto"></select></label>
       <label style="width:auto">เดือน <select id="sumMonth" style="width:auto"></select></label>
+      <button class="btn pri" id="btnExcel" title="ดาวน์โหลดรายการเช่า + สรุปตามห้อง ของช่วงที่เลือก">⬇ ดาวน์โหลด Excel</button>
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="charts">
@@ -292,9 +293,8 @@ async function load() {
     try { db = JSON.parse(localStorage.getItem('banrimphoo') || 'null') || db; } catch {}
   }
   db.rooms ||= []; db.entries ||= [];
-  $('#foot').textContent = mode === 'server'
-    ? 'ข้อมูลบันทึกที่ data.json (ผ่าน serve.py)'
-    : 'ไม่ได้เปิดผ่าน serve.py — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น';
+  // เตือนเฉพาะตอนเปิดไฟล์ตรง ๆ (ไม่ผ่าน serve.py) เพราะข้อมูลจะอยู่แค่ในเบราว์เซอร์นี้
+  $('#foot').textContent = mode === 'server' ? '' : 'ไม่ได้เปิดผ่าน serve.py — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น';
 }
 async function save() {
   try {
@@ -596,6 +596,19 @@ function initSummaryFilters() {
   ms.value = prevM || String(today.getMonth());
 }
 $('#sumYear').onchange = $('#sumMonth').onchange = () => renderSummary(true);
+// Excel สร้างที่เซิร์ฟเวอร์ (ช่วงตามปี/เดือนที่เลือกอยู่)
+$('#btnExcel').onclick = async () => {
+  if (mode !== 'server') return toast('ดาวน์โหลด Excel ได้เมื่อเปิดผ่าน serve.py');
+  const m = $('#sumMonth').value, period = $('#sumYear').value + (m === 'all' ? '' : '-' + pad(+m + 1));
+  const r = await fetch('api/export?period=' + period, { cache: 'no-store' });
+  if (r.status === 401) return toLogin();
+  if (!r.ok) return toast('ดาวน์โหลดไม่สำเร็จ');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await r.blob()); a.download = `banrimphoo-${period}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('ดาวน์โหลดแล้ว');
+};
 
 function renderSummary(keep) {
   if (keep !== true) initSummaryFilters();

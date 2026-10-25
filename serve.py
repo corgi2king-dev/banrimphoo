@@ -2,21 +2,24 @@
 """บ้านริมภู — เว็บจัดการเช่าที่พัก
 
 รัน:  python3 work/banrimphoo/serve.py [port]   (ค่าเริ่มต้น 8787) → http://127.0.0.1:8787
-ข้อมูล: data.json  {"rooms": [...], "entries": [...]}
+ข้อมูล: rooms.json = รายการห้อง · entries/YYYY-MM.json = การจองแยกไฟล์ละเดือน
+       (data.json แบบเก่าจะถูกแยกให้อัตโนมัติตอนเปิด แล้วเปลี่ยนชื่อเป็น data.json.migrated)
+Excel: GET /api/export?period=YYYY-MM หรือ YYYY → ไฟล์ .xlsx (xlsx_export.py)
 ผู้ใช้: auth.json  {"users": {"<ชื่อ>": {"salt", "hash", "iter"}}} — เก็บเฉพาะ hash (PBKDF2-SHA256)
        ยังไม่มีผู้ใช้ → เปิดเว็บครั้งแรกจะให้ตั้งชื่อผู้ใช้/รหัสผ่านเอง
-ตั้ง BANRIMPHOO_DIR เพื่อย้ายที่เก็บ data.json / auth.json (ค่าเริ่มต้น = โฟลเดอร์นี้)
+ตั้ง BANRIMPHOO_DIR เพื่อย้ายที่เก็บข้อมูล / auth.json (ค่าเริ่มต้น = โฟลเดอร์นี้)
 
 ขึ้นเซิร์ฟเวอร์จริง (ดู deploy/setup.sh) ใช้ env:
   BRP_HOST=127.0.0.1  BRP_PORT=8787   ฟังที่ไหน (อยู่หลัง Caddy → 127.0.0.1)
   BRP_SECURE=1        คุกกี้ส่งผ่าน https เท่านั้น
   BRP_TRUST_PROXY=1   อ่าน IP จริงจาก X-Forwarded-For (ใช้เมื่ออยู่หลัง reverse proxy เท่านั้น)
-สำรองข้อมูล: ก่อนบันทึกครั้งแรกของแต่ละวัน คัดลอก data.json ไว้ที่ backups/ (เก็บ 30 วันล่าสุด)
+สำรองข้อมูล: ก่อนบันทึกครั้งแรกของแต่ละวัน คัดลอก rooms.json + entries/ ไว้ที่ backups/YYYY-MM-DD/ (เก็บ 30 วันล่าสุด)
 """
 import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import shutil
 import sys
@@ -24,10 +27,17 @@ import threading
 import time
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
+
+import xlsx_export
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STORE = os.environ.get("BANRIMPHOO_DIR", ROOT)
-DATA = os.path.join(STORE, "data.json")
+DATA = os.path.join(STORE, "data.json")  # รูปแบบเก่า (ไฟล์เดียว) — ใช้แค่ตอนย้ายข้อมูล
+ROOMS = os.path.join(STORE, "rooms.json")
+ENTRIES = os.path.join(STORE, "entries")
+MONTH_FILE = re.compile(r"^\d{4}-\d{2}\.json$")
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 AUTH = os.path.join(STORE, "auth.json")
 SESS = os.path.join(STORE, "sessions.json")
 BACKUPS = os.path.join(STORE, "backups")
@@ -35,6 +45,8 @@ KEEP_BACKUPS = 30
 SECURE = os.environ.get("BRP_SECURE") == "1"
 TRUST_PROXY = os.environ.get("BRP_TRUST_PROXY") == "1"
 EMPTY = {"rooms": [], "entries": []}
+TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+             "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
 STATIC = {"/": "index.html", "/index.html": "index.html", "/login": "login.html", "/login.html": "login.html",
           "/scene.js": "scene.js", "/photo.jpg": "photo.jpg"}
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".jpg": "image/jpeg"}
@@ -72,16 +84,57 @@ def save_sessions():  # เรียกใน lock
     write_json(SESS, sessions)
 
 
+def month_files():
+    return sorted(f for f in os.listdir(ENTRIES) if MONTH_FILE.match(f)) if os.path.isdir(ENTRIES) else []
+
+
+def load_db():
+    entries = []
+    for f in month_files():
+        entries += read_json(os.path.join(ENTRIES, f), [])
+    return {"rooms": read_json(ROOMS, []), "entries": entries}
+
+
+def save_db(db):
+    """rooms → rooms.json · entries → entries/YYYY-MM.json (เขียนเฉพาะเดือนที่เปลี่ยน, เดือนที่ว่างแล้วลบไฟล์)"""
+    os.makedirs(ENTRIES, exist_ok=True)
+    if read_json(ROOMS, None) != db["rooms"]:
+        write_json(ROOMS, db["rooms"])
+    by_month = {}
+    for e in db["entries"]:
+        by_month.setdefault(e["date"][:7], []).append(e)
+    for f in month_files():
+        if f[:7] not in by_month:
+            os.remove(os.path.join(ENTRIES, f))
+    for m, es in by_month.items():
+        path = os.path.join(ENTRIES, f"{m}.json")
+        es.sort(key=lambda e: e["date"])
+        if read_json(path, None) != es:
+            write_json(path, es)
+
+
+def migrate():
+    """data.json (ไฟล์เดียวแบบเก่า) → rooms.json + entries/ — ทำครั้งเดียว เก็บไฟล์เดิมไว้เป็น data.json.migrated"""
+    if os.path.exists(DATA) and not os.path.exists(ROOMS):
+        save_db(read_json(DATA, EMPTY))
+        os.replace(DATA, DATA + ".migrated")
+        print(f"ย้ายข้อมูลจาก data.json → rooms.json + entries/ ({len(month_files())} เดือน)", flush=True)
+
+
 def backup_data():
-    """คัดลอก data.json ไว้วันละครั้ง ก่อนถูกเขียนทับ"""
-    if not os.path.exists(DATA):
+    """คัดลอกข้อมูลทั้งหมดไว้วันละครั้ง ก่อนถูกเขียนทับ → backups/YYYY-MM-DD/"""
+    if not os.path.exists(ROOMS):
         return
-    os.makedirs(BACKUPS, exist_ok=True)
-    dst = os.path.join(BACKUPS, time.strftime("data-%Y-%m-%d.json"))
-    if not os.path.exists(dst):
-        shutil.copy2(DATA, dst)
-        for old in sorted(f for f in os.listdir(BACKUPS) if f.startswith("data-"))[:-KEEP_BACKUPS]:
-            os.remove(os.path.join(BACKUPS, old))
+    dst = os.path.join(BACKUPS, time.strftime("%Y-%m-%d"))
+    if os.path.exists(dst):
+        return
+    os.makedirs(dst)
+    shutil.copy2(ROOMS, dst)
+    if os.path.isdir(ENTRIES):
+        shutil.copytree(ENTRIES, os.path.join(dst, "entries"))
+    days = sorted(d for d in os.listdir(BACKUPS) if re.match(r"^\d{4}-\d{2}-\d{2}$", d))
+    for old in days[:-KEEP_BACKUPS]:
+        shutil.rmtree(os.path.join(BACKUPS, old))
 
 
 def cookie(tok, age):
@@ -174,6 +227,24 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _export(self):
+        period = parse_qs(urlparse(self.path).query).get("period", [""])[0]
+        if not re.match(r"^\d{4}(-\d{2})?$", period):
+            return self._json(400, {"error": "period ต้องเป็น YYYY หรือ YYYY-MM"})
+        db = load_db()
+        es = [e for e in db["entries"] if e["date"].startswith(period)]
+        y = int(period[:4])
+        title = (f"บ้านริมภู · รายงานค่าเช่า {TH_MONTHS[int(period[5:]) - 1]} {y + 543}" if len(period) == 7
+                 else f"บ้านริมภู · รายงานค่าเช่า ปี {y + 543}")
+        body = xlsx_export.build(db["rooms"], es, title)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition", f'attachment; filename="banrimphoo-{period}.xlsx"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     def _redirect(self, to):
         self.send_response(302)
         self.send_header("Location", to)
@@ -190,7 +261,9 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/login", "/login.html") and s:
             return self._redirect("/")
         if p == "/api/data":
-            return self._json(200, read_json(DATA, EMPTY))
+            return self._json(200, load_db())
+        if p == "/api/export":
+            return self._export()
         if p in STATIC:
             return self._static(STATIC[p])
         return self._json(404, {"error": "not found"})
@@ -258,9 +331,11 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/data":
             if not isinstance(body.get("rooms"), list) or not isinstance(body.get("entries"), list):
                 return self._json(400, {"error": "rooms / entries ต้องเป็น list"})
+            if not all(isinstance(e, dict) and DATE.match(str(e.get("date", ""))) for e in body["entries"]):
+                return self._json(400, {"error": "entries ต้องมี date แบบ YYYY-MM-DD"})
             with lock:
                 backup_data()
-                write_json(DATA, body)
+                save_db(body)
             return self._json(200, {"ok": True})
 
         return self._json(404, {"error": "not found"})
@@ -275,5 +350,6 @@ if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("BRP_PORT", 8787))
     os.makedirs(STORE, exist_ok=True)
     sessions.update(read_json(SESS, {}))
+    migrate()
     print(f"บ้านริมภู → http://{host}:{port}  (data: {STORE}, secure={SECURE}, proxy={TRUST_PROXY})", flush=True)
     ThreadingHTTPServer((host, port), Handler).serve_forever()
