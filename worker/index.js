@@ -9,6 +9,10 @@ const COOKIE = 'brp_session';
 const SESSION_TTL = 7 * 24 * 3600;
 const ITER = 100_000; // เพดาน PBKDF2 ของ Workers
 const PUBLIC = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/api/me', '/api/login']);
+// ไม่ต้องเช็ก session (ไม่แตะ D1) — หน้าล็อกอินเช็กเองผ่าน /api/me แล้ว redirect ฝั่งเบราว์เซอร์
+const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/api/login']);
+// cache: ไฟล์ภาพ/สคริปต์ที่ไม่ใช่ข้อมูล → เก็บไว้ 1 วัน · หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag)
+const CACHE = { '/scene.js': 'public, max-age=86400', '/photo.jpg': 'public, max-age=86400' };
 const KINDS = ['rooms', 'entries', 'expenses'];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -214,19 +218,18 @@ export default {
 
 async function handle(req, env) {
   const url = new URL(req.url), p = url.pathname;
-  const s = await session(req, env);
+  const s = NO_SESSION.has(p) ? null : await session(req, env);
 
   if (req.method === 'GET') {
     if (p === '/api/me') return json(200, { user: s?.user || null, setup: false });
     if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
-    if ((p === '/login' || p === '/login.html') && s) return Response.redirect(new URL('/', url), 302);
-    if (p === '/api/data') return json(200, await loadDb(env));
+    if (p === '/api/data') return json(200, { ...await loadDb(env), user: s.user });  // รวมชื่อผู้ใช้มาด้วย ไม่ต้องเรียก /api/me อีกรอบ
     if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
   if (p === '/api/history') return history(env, url.searchParams.get('period') || '');
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });
     const res = await env.ASSETS.fetch(req);
     const out = new Response(res.body, res);
-    out.headers.set('Cache-Control', 'no-store');
+    out.headers.set('Cache-Control', CACHE[p] || 'private, no-cache');
     return out;
   }
 

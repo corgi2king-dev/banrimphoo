@@ -432,7 +432,8 @@ async function load() {
     const r = await fetch('api/data', { cache: 'no-store' });
     if (r.status === 401) return toLogin();
     if (!r.ok) throw 0;
-    db = await r.json(); mode = 'server';
+    db = await r.json(); mode = 'server'; loadedAt = Date.now();
+    serverUser = db.user || null; delete db.user;
   } catch {
     mode = 'local';
     try { db = JSON.parse(localStorage.getItem('banrimphoo') || 'null') || db; } catch {}
@@ -472,16 +473,17 @@ function save() {
 }
 // กลับมาที่หน้านี้ (สลับแอป/แท็บ) → ดึงข้อมูลล่าสุด เผื่อมีคนอื่นแก้ (ข้ามถ้ากำลังเปิดหน้าต่างอยู่)
 document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible' || mode !== 'server' || $$('.mask.on').length) return;
+  if (document.visibilityState !== 'visible' || mode !== 'server' || $$('.mask.on').length || Date.now() - loadedAt < 30000) return;
   await saving; await load(); show(curTab);
 });
 function toLogin() { location.replace('/login'); return new Promise(() => {}); }
+let serverUser = null, loadedAt = 0;  // มากับ /api/data — ไม่ต้องเรียก /api/me แยก (ลด 1 รอบ)
 async function showUser() {
   if (mode !== 'server') return;
   try {
-    const me = await (await fetch('api/me', { cache: 'no-store' })).json();
-    if (!me.user) return toLogin();
-    $('#userName').textContent = '👤 ' + me.user; $('#userBox').hidden = false;
+    const user = serverUser || (await (await fetch('api/me', { cache: 'no-store' })).json()).user;
+    if (!user) return toLogin();
+    $('#userName').textContent = '👤 ' + user; $('#userBox').hidden = false;
   } catch {}
 }
 $('#btnLogout').onclick = async () => {

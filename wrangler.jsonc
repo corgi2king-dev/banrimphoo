@@ -9,5 +9,7 @@
     // ฐานข้อมูล D1 บน Cloudflare (สร้างแล้ว, region APAC) — database_id ไม่ใช่ความลับ
     { "binding": "DB", "database_name": "banrimphoo", "database_id": "37204096-0b86-45b8-82d0-a3f83900aed0" }
   ],
+  // Smart Placement: ให้ Cloudflare ย้าย Worker ไปรันใกล้ฐานข้อมูล ถ้าช่วยให้เร็วขึ้น (คำขอหนึ่งเรียก D1 หลายครั้ง)
+  "placement": { "mode": "smart" },
   "observability": { "enabled": true }
 }

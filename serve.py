@@ -341,7 +341,7 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/login", "/login.html") and s:
             return self._redirect("/")
         if p == "/api/data":
-            return self._json(200, load_db())
+            return self._json(200, {**load_db(), "user": s["user"]})
         if p == "/api/export":
             return self._export()
         if p == "/api/history":
