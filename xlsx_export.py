@@ -1,8 +1,9 @@
 """สร้างไฟล์ Excel (.xlsx) รายงานค่าเช่า — ใช้แค่ไลบรารีมาตรฐานของ Python (zipfile + XML)
 
-build(rooms, entries, title) → bytes ของไฟล์ .xlsx มี 2 ชีต:
+build(rooms, entries, title, expenses=()) → bytes ของไฟล์ .xlsx มี 3 ชีต:
   1. รายการเช่า   วันที่ · ห้อง · ประเภท · ผู้เข้าพัก · ค่าเช่า · สถานะ · ช่องทาง · หมายเหตุ (+ แถวรวม)
   2. สรุปตามห้อง  ห้อง · ประเภท · จำนวนคืน · รายได้ · รับเงินแล้ว (รวมมัดจำ) · ค้างชำระ (+ แถวรวม)
+  3. ค่าใช้จ่าย   วันที่ · หมวด · จำนวนเงิน · จ่ายด้วย · รายละเอียด (+ แถวรวม) และสรุป รายได้ − ค่าใช้จ่าย = กำไรสุทธิ
 สถานะ: ชำระแล้ว / มัดจำ (deposit > 0 แต่ยังไม่ครบ) / ค้างชำระ
 """
 import datetime as dt
@@ -71,7 +72,7 @@ def _serial(date_str):
     return (d - dt.date(1899, 12, 30)).days
 
 
-def build(rooms, entries, title):
+def build(rooms, entries, title, expenses=()):
     room = {r.get("id"): r for r in rooms}
     order = {r.get("id"): i for i, r in enumerate(rooms)}
     es = sorted(entries, key=lambda e: (e.get("date", ""), order.get(e.get("roomId"), 999)))
@@ -108,8 +109,23 @@ def build(rooms, entries, title):
         rows2.append([(r.get("name", ""), DUE), (r.get("type", ""), TEXT)] + [(v, NUM) for v in vals])
     rows2.append([("รวม", TOTAL_TXT), ("", TOTAL_TXT)] + [(v, TOTAL_NUM) for v in sums])
 
+    # ชีต 3: ค่าใช้จ่าย + กำไร
+    xs = sorted(expenses, key=lambda e: e.get("date", ""))
+    head3 = ["วันที่", "หมวด", "จำนวนเงิน (บาท)", "จ่ายด้วย", "รายละเอียด"]
+    rows3 = [[(title, TITLE)], [], [(h, HEAD) for h in head3]]
+    for e in xs:
+        rows3.append([(_serial(e["date"]), DATE), (e.get("cat", ""), TEXT), (amt(e), NUM),
+                      (e.get("channel", ""), TEXT), (e.get("note", ""), TEXT)])
+    ex_total = sum(amt(e) for e in xs)
+    rows3.append([(f"รวม {len(xs)} รายการ", TOTAL_TXT), ("", TOTAL_TXT), (ex_total, TOTAL_NUM), ("", TOTAL_TXT), ("", TOTAL_TXT)])
+    rows3 += [[], [("สรุป", HEAD), ("", HEAD), ("บาท", HEAD)],
+              [("รายได้ (ค่าเช่า)", TEXT), ("", TEXT), (total, NUM)],
+              [("ค่าใช้จ่าย", TEXT), ("", TEXT), (ex_total, NUM)],
+              [("กำไรสุทธิ", TOTAL_TXT), ("", TOTAL_TXT), (total - ex_total, TOTAL_NUM)]]
+
     sheets = [("รายการเช่า", _sheet(rows1, [16, 10, 16, 22, 14, 22, 12, 30], 3)),
-              ("สรุปตามห้อง", _sheet(rows2, [12, 16, 12, 15, 18, 16], 3))]
+              ("สรุปตามห้อง", _sheet(rows2, [12, 16, 12, 15, 18, 16], 3)),
+              ("ค่าใช้จ่าย", _sheet(rows3, [16, 18, 16, 12, 34], 3))]
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:

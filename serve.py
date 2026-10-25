@@ -4,7 +4,7 @@
 รัน:  python3 work/banrimphoo/serve.py [port]   (ค่าเริ่มต้น 8787) → http://127.0.0.1:8787
 ข้อมูล: rooms.json = รายการห้อง · entries/YYYY-MM.json = การจอง · expenses/YYYY-MM.json = ค่าใช้จ่าย (ไฟล์ละเดือน)
        (data.json แบบเก่าจะถูกแยกให้อัตโนมัติตอนเปิด แล้วเปลี่ยนชื่อเป็น data.json.migrated)
-Excel: GET /api/export?period=YYYY-MM หรือ YYYY → ไฟล์ .xlsx (xlsx_export.py)
+Excel: GET /api/export?period=YYYY-MM หรือ YYYY → ไฟล์ .xlsx รายการเช่า + สรุปตามห้อง + ค่าใช้จ่าย/กำไร (xlsx_export.py)
 ผู้ใช้: auth.json  {"users": {"<ชื่อ>": {"salt", "hash", "iter"}}} — เก็บเฉพาะ hash (PBKDF2-SHA256)
        ยังไม่มีผู้ใช้ → เปิดเว็บครั้งแรกจะให้ตั้งชื่อผู้ใช้/รหัสผ่านเอง
 ตั้ง BANRIMPHOO_DIR เพื่อย้ายที่เก็บข้อมูล / auth.json (ค่าเริ่มต้น = โฟลเดอร์นี้)
@@ -248,7 +248,8 @@ class Handler(SimpleHTTPRequestHandler):
         y = int(period[:4])
         title = (f"บ้านริมภู · รายงานค่าเช่า {TH_MONTHS[int(period[5:]) - 1]} {y + 543}" if len(period) == 7
                  else f"บ้านริมภู · รายงานค่าเช่า ปี {y + 543}")
-        body = xlsx_export.build(db["rooms"], es, title)
+        xs = [e for e in db["expenses"] if e["date"].startswith(period)]
+        body = xlsx_export.build(db["rooms"], es, title, xs)
         self.send_response(200)
         self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         self.send_header("Content-Disposition", f'attachment; filename="banrimphoo-{period}.xlsx"')
