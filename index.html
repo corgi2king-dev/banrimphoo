@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>บ้านริมภู · จัดการที่พัก</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1f2a24; --muted:#6b756f; --line:#e3e0d8;
+  --accent:#2f6b4f; --accent-soft:#e3efe8; --warn:#b26a00; --warn-soft:#fbefdc;
+  --danger:#b3261e; --danger-soft:#fbe3e1; --today:#fff7d6; --other:#faf9f6;
+  --c1:#2f6b4f; --c2:#4f8fc0; --c3:#d08a3b; --c4:#9a5fb5; --c5:#8d6a46; --c6:#3f9a92; --c7:#5b67c2; --c8:#7f8a2a;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141816; --panel:#1d2320; --ink:#e6ebe8; --muted:#97a39c; --line:#2f3733;
+    --accent:#6cc39a; --accent-soft:#22362c; --warn:#e6a54a; --warn-soft:#3a2e1c;
+    --danger:#ef7a72; --danger-soft:#3d2321; --today:#33301f; --other:#191e1b;
+    --c1:#6cc39a; --c2:#7ab3e0; --c3:#e6a65c; --c4:#bf8fd6; --c5:#c49a6c; --c6:#6fc4bb; --c7:#8f99e6; --c8:#b6c25a;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:18px;color:var(--accent);margin-right:auto;display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px;border-radius:10px;overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.hero{position:relative;height:150px;border-radius:14px;overflow:hidden;margin-bottom:16px;border:1px solid var(--line)}
+.hero .scn{position:absolute;inset:0}
+.hero .txt{position:absolute;left:22px;bottom:16px;right:22px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.45)}
+.hero .txt b{font-size:22px;display:block}
+.hero .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.hero .stats span{background:rgba(0,0,0,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:2px 10px;border-radius:99px;font-size:13px;text-shadow:none}
+@media (max-width:640px){.hero{height:120px}.hero .txt b{font-size:18px}}
+.user{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+nav{display:flex;gap:4px}
+nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+h2{margin:0;font-size:18px}
+h3{margin:0 0 12px;font-size:15px}
+button.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;font:inherit;cursor:pointer}
+button.btn:hover{border-color:var(--accent)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.pri:hover{filter:brightness(1.08)}
+button.dang{color:var(--danger)}
+button.sm{padding:3px 10px;font-size:13px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+label{display:block;font-size:13px;color:var(--muted)}
+label > input,label > select,label > textarea{margin-top:3px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px}
+.tag.ok{background:var(--accent-soft);color:var(--accent)}
+.tag.off{background:var(--warn-soft);color:var(--warn)}
+.tag.due{background:var(--danger-soft);color:var(--danger)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.empty{color:var(--muted);text-align:center;padding:28px}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cal .h{background:var(--panel);text-align:center;font-size:13px;color:var(--muted);padding:6px 0}
+.cal .d{background:var(--panel);min-height:104px;padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cal .d:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.cal .d.other{background:var(--other);color:var(--muted)}
+.cal .d.today{background:var(--today)}
+.cal .dn{display:flex;justify-content:space-between;font-size:13px}
+.cal .sum{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.chip{font-size:11.5px;border-radius:5px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.chip.pend{color:#fff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+
+/* summary */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--muted)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.charts .card{margin:0}
+svg text{fill:var(--muted);font-size:11px}
+svg .bar{fill:var(--accent)}
+svg .col{cursor:pointer}
+svg .col:hover .bar{filter:brightness(1.2)}
+svg .col:hover .hit{fill:var(--accent-soft);opacity:.5}
+.hbar,.donut circle{cursor:pointer}
+.hbar:hover .fill,.donut circle:hover{filter:brightness(1.15)}
+.tip{position:fixed;z-index:40;pointer-events:none;background:var(--ink);color:var(--panel);padding:6px 10px;border-radius:8px;font-size:13px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);display:none}
+.tip b{font-size:15px}
+svg .grid{stroke:var(--line)}
+.hbar{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.hbar .track{background:var(--bg);border-radius:6px;height:18px;overflow:hidden}
+.hbar .fill{height:100%;border-radius:6px}
+.hbar .val{text-align:right;font-variant-numeric:tabular-nums}
+.hbar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.donut{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:20;overflow:auto}
+.mask.on{display:flex}
+.modal{background:var(--panel);border-radius:14px;width:100%;max-width:560px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal .x{border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:8px 0 24px}
+
+@media (max-width:640px){
+  .cal .d{min-height:70px;padding:3px}
+  .chip{font-size:10px;padding:0 3px}
+  .cal .sum{font-size:11px}
+  .hbar{grid-template-columns:80px 1fr 70px}
+  th.hide-sm,td.hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><div class="logo" data-scene="logo"></div><span>บ้านริมภู<small>ระบบจัดการที่พัก</small></span></div>
+    <nav>
+      <button data-tab="rooms">🛏 จัดการห้องพัก</button>
+      <button data-tab="calendar">📅 บันทึกค่าเช่า</button>
+      <button data-tab="summary">📊 สรุปค่าเช่า</button>
+    </nav>
+    <div class="user" id="userBox" hidden>
+      <span id="userName"></span>
+      <button class="btn sm" id="btnPw">เปลี่ยนรหัสผ่าน</button>
+      <button class="btn sm" id="btnLogout">ออกจากระบบ</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="hero"><div data-scene="banner"></div><div class="txt"><b id="heroHi"></b><div class="stats" id="heroStats"></div></div></div>
+  <!-- ห้องพัก -->
+  <section id="tab-rooms" hidden>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <h2>ห้องพัก</h2><div class="sp"></div>
+        <button class="btn pri" id="btnAddRoom">+ เพิ่มห้อง</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>ห้อง</th><th class="hide-sm">ประเภท</th><th class="num">ราคา/คืน</th><th class="num hide-sm">รองรับ (คน)</th><th>สถานะ</th><th class="hide-sm">หมายเหตุ</th><th></th></tr></thead>
+          <tbody id="roomRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ปฏิทิน -->
+  <section id="tab-calendar" hidden>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn" id="calPrev">‹</button>
+        <h2 id="calTitle" style="min-width:170px;text-align:center"></h2>
+        <button class="btn" id="calNext">›</button>
+        <button class="btn sm" id="calToday">วันนี้</button>
+        <div class="sp"></div>
+        <div id="calMonthSum" style="font-weight:600"></div>
+      </div>
+      <div class="cal" id="cal"></div>
+      <div class="legend" id="calLegend" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- สรุป -->
+  <section id="tab-summary" hidden>
+    <div class="card row">
+      <h2>สรุปค่าเช่า</h2><div class="sp"></div>
+      <label style="width:auto">ปี <select id="sumYear" style="width:auto"></select></label>
+      <label style="width:auto">เดือน <select id="sumMonth" style="width:auto"></select></label>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="charts">
+      <div class="card"><h3 id="chDailyTitle">รายได้รายวัน</h3><div id="chDaily"></div></div>
+      <div class="card"><h3 id="chMonthlyTitle">รายได้รายเดือน</h3><div id="chMonthly"></div></div>
+      <div class="card"><h3>รายได้แยกตามห้อง</h3><div id="chRooms"></div></div>
+      <div class="card"><h3>สถานะการชำระเงิน</h3><div id="chPaid"></div></div>
+    </div>
+  </section>
+  <div class="foot" id="foot"></div>
+</main>
+
+<!-- modal ห้อง -->
+<div class="mask" id="roomMask">
+  <div class="modal">
+    <div class="row"><h2 id="roomFormTitle">เพิ่มห้อง</h2><div class="sp"></div><button class="x" data-close>×</button></div>
+    <form id="roomForm" style="margin-top:12px">
+      <div class="grid2">
+        <label>ชื่อห้อง / เลขห้อง *<input name="name" required></label>
+        <label>ประเภท<select name="type"></select><input name="typeNew" placeholder="พิมพ์ชื่อประเภทใหม่" maxlength="40" hidden style="margin-top:6px"></label>
+        <label>ราคา/คืน (บาท)<input name="price" type="number" min="0" step="1"></label>
+        <label>รองรับ (คน)<input name="capacity" type="number" min="1" step="1"></label>
+        <label>สถานะ<select name="status"><option value="open">เปิดให้เช่า</option><option value="closed">ปิดปรับปรุง</option></select></label>
+      </div>
+      <label style="margin-top:10px">หมายเหตุ<textarea name="note" rows="2"></textarea></label>
+      <div class="row" style="margin-top:14px"><div class="sp"></div><button type="button" class="btn" data-close>ยกเลิก</button><button class="btn pri">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- modal วัน -->
+<div class="mask" id="dayMask">
+  <div class="modal">
+    <div class="row"><h2 id="dayTitle"></h2><div class="sp"></div><button class="x" data-close>×</button></div>
+    <div id="dayList" style="margin:10px 0"></div>
+    <form id="entryForm" style="border-top:1px solid var(--line);padding-top:12px">
+      <h3 id="entryFormTitle">เพิ่มรายการเช่า</h3>
+      <div class="grid2">
+        <label>ห้อง *<select name="roomId" required></select></label>
+        <label>ชื่อผู้เข้าพัก<input name="guest"></label>
+        <label>ค่าเช่า/คืน (บาท) *<input name="amount" type="number" min="0" step="1" required></label>
+        <label>การชำระเงิน<select name="paid"><option value="1">ชำระแล้ว</option><option value="0">ค้างชำระ</option></select></label>
+        <label>ช่องทาง<select name="channel"><option value="">-</option><option>เงินสด</option><option>โอน</option><option>Agoda</option><option>Booking</option><option>Airbnb</option><option>อื่น ๆ</option></select></label>
+      </div>
+      <div id="roomHint" style="font-size:13px;margin-top:6px"></div>
+      <label style="margin-top:10px">หมายเหตุ<input name="note"></label>
+      <div class="row" style="margin-top:14px"><div class="sp"></div>
+        <button type="button" class="btn" id="entryCancel" hidden>ยกเลิกแก้ไข</button>
+        <button class="btn pri" id="entrySubmit">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- modal เปลี่ยนรหัสผ่าน -->
+<div class="mask" id="pwMask">
+  <div class="modal" style="max-width:400px">
+    <div class="row"><h2>เปลี่ยนรหัสผ่าน</h2><div class="sp"></div><button class="x" data-close>×</button></div>
+    <form id="pwForm" style="margin-top:12px">
+      <label>รหัสผ่านเดิม<input name="old" type="password" autocomplete="current-password" required></label>
+      <label style="margin-top:10px">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input name="new" type="password" autocomplete="new-password" minlength="8" required></label>
+      <label style="margin-top:10px">ยืนยันรหัสผ่านใหม่<input name="new2" type="password" autocomplete="new-password" required></label>
+      <div id="pwErr" style="color:var(--danger);font-size:14px;margin-top:10px"></div>
+      <div class="row" style="margin-top:14px"><div class="sp"></div><button type="button" class="btn" data-close>ยกเลิก</button><button class="btn pri">บันทึก</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ยืนยัน (แทน confirm() ซึ่งใช้ไม่ได้ในบางเบราว์เซอร์) -->
+<div class="mask" id="askMask" style="z-index:30;align-items:center">
+  <div class="modal" style="max-width:420px">
+    <div id="askMsg" style="white-space:pre-line;font-size:16px"></div>
+    <div class="row" style="margin-top:18px"><div class="sp"></div>
+      <button type="button" class="btn" id="askNo"></button><button type="button" class="btn pri" id="askYes"></button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="tip" id="tip"></div>
+
+<script src="scene.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const baht = n => '฿' + Math.round(n || 0).toLocaleString('th-TH');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_DOW = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const be = y => y + 543;
+// สีห้อง — ไม่มีสีแดง (สงวนไว้ให้ "ค้างชำระ")
+const COLORS = ['--c1','--c2','--c3','--c4','--c5','--c6','--c7','--c8'];
+
+let db = { rooms: [], entries: [] };
+let mode = 'local';
+const today = new Date();
+let calY = today.getFullYear(), calM = today.getMonth();
+
+// ---------- storage ----------
+async function load() {
+  try {
+    const r = await fetch('api/data', { cache: 'no-store' });
+    if (r.status === 401) return toLogin();
+    if (!r.ok) throw 0;
+    db = await r.json(); mode = 'server';
+  } catch {
+    mode = 'local';
+    try { db = JSON.parse(localStorage.getItem('banrimphoo') || 'null') || db; } catch {}
+  }
+  db.rooms ||= []; db.entries ||= [];
+  $('#foot').textContent = mode === 'server'
+    ? 'ข้อมูลบันทึกที่ data.json (ผ่าน serve.py)'
+    : 'ไม่ได้เปิดผ่าน serve.py — ข้อมูลเก็บในเบราว์เซอร์นี้เท่านั้น';
+}
+async function save() {
+  try {
+    if (mode === 'server') {
+      const r = await fetch('api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(db) });
+      if (r.status === 401) { toast('หมดเวลาเข้าสู่ระบบ — กรุณาเข้าใหม่'); return setTimeout(toLogin, 1200); }
+      if (!r.ok) throw new Error((await r.json()).error);
+    } else localStorage.setItem('banrimphoo', JSON.stringify(db));
+    toast('บันทึกแล้ว'); renderHero();
+  } catch (e) { toast('บันทึกไม่สำเร็จ: ' + e.message); }
+}
+function toLogin() { location.replace('/login'); return new Promise(() => {}); }
+async function showUser() {
+  if (mode !== 'server') return;
+  try {
+    const me = await (await fetch('api/me', { cache: 'no-store' })).json();
+    if (!me.user) return toLogin();
+    $('#userName').textContent = '👤 ' + me.user; $('#userBox').hidden = false;
+  } catch {}
+}
+$('#btnLogout').onclick = async () => {
+  if (!await ask('ออกจากระบบ?', 'ออกจากระบบ')) return;
+  await fetch('api/logout', { method: 'POST' }).catch(() => {});
+  toLogin();
+};
+$('#btnPw').onclick = () => { $('#pwForm').reset(); $('#pwErr').textContent = ''; $('#pwMask').classList.add('on'); $('#pwForm').old.focus(); };
+$('#pwForm').onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.new.value !== f.new2.value) return $('#pwErr').textContent = 'รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน';
+  const r = await fetch('api/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ old: f.old.value, new: f.new.value }) });
+  if (r.status === 401) return toLogin();
+  const j = await r.json();
+  if (!r.ok) return $('#pwErr').textContent = j.error;
+  $('#pwMask').classList.remove('on'); toast('เปลี่ยนรหัสผ่านแล้ว');
+};
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1600); }
+
+const roomById = id => db.rooms.find(r => r.id === id);
+const roomColor = id => {
+  const i = Math.max(0, db.rooms.findIndex(r => r.id === id));
+  return `var(${COLORS[i % COLORS.length]})`;
+};
+
+// ---------- tabs ----------
+function renderHero() {
+  const h = today.getHours();
+  $('#heroHi').textContent = `${h < 12 ? 'สวัสดีตอนเช้า' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'} · ${TH_DOW[today.getDay()]}. ${today.getDate()} ${TH_MONTHS[today.getMonth()]} ${be(today.getFullYear())}`;
+  const k = ymd(today), list = db.entries.filter(e => e.date === k);
+  const open = db.rooms.filter(r => r.status !== 'closed').length;
+  const booked = new Set(list.map(e => e.roomId)).size;
+  const ym = k.slice(0, 7), month = db.entries.filter(e => e.date.startsWith(ym));
+  const due = db.entries.filter(e => !e.paid).reduce((a, e) => a + (+e.amount || 0), 0);
+  $('#heroStats').innerHTML = [
+    `🛏 คืนนี้เข้าพัก ${booked}/${open} ห้อง`,
+    `💰 เดือนนี้ ${baht(month.reduce((a, e) => a + (+e.amount || 0), 0))}`,
+    due ? `⚠️ ค้างชำระ ${baht(due)}` : '✓ ไม่มีค้างชำระ',
+  ].map(t => `<span>${t}</span>`).join('');
+}
+function show(tab) {
+  renderHero();
+  $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $$('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
+  try { localStorage.setItem('banrimphoo.tab', tab); } catch {}
+  ({ rooms: renderRooms, calendar: renderCal, summary: renderSummary })[tab]();
+}
+$$('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+$$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
+$$('.mask:not(#askMask)').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) m.classList.remove('on'); }));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#askMask').classList.contains('on')) return closeAsk(false);
+  $$('.mask.on').forEach(m => m.classList.remove('on'));
+});
+
+// ask(msg) → Promise<boolean>
+let askResolve = null;
+function ask(msg, yes = 'ตกลง', no = 'ยกเลิก', danger = false) {
+  $('#askMsg').textContent = msg;
+  $('#askYes').textContent = yes; $('#askNo').textContent = no;
+  $('#askYes').style.background = $('#askYes').style.borderColor = danger ? 'var(--danger)' : '';
+  $('#askMask').classList.add('on'); $('#askYes').focus();
+  return new Promise(r => askResolve = r);
+}
+function closeAsk(v) { $('#askMask').classList.remove('on'); askResolve?.(v); askResolve = null; }
+$('#askYes').onclick = () => closeAsk(true);
+$('#askNo').onclick = () => closeAsk(false);
+$('#askMask').addEventListener('mousedown', e => { if (e.target === e.currentTarget) closeAsk(false); });
+
+// ---------- rooms ----------
+function renderRooms() {
+  const rows = db.rooms.map(r => {
+    const used = db.entries.filter(e => e.roomId === r.id).length;
+    return `<tr>
+      <td><span class="dot" style="background:${roomColor(r.id)}"></span><b>${esc(r.name)}</b></td>
+      <td class="hide-sm">${esc(r.type)}</td>
+      <td class="num">${r.price ? baht(r.price) : '-'}</td>
+      <td class="num hide-sm">${r.capacity || '-'}</td>
+      <td>${r.status === 'closed' ? '<span class="tag off">ปิดปรับปรุง</span>' : '<span class="tag ok">เปิดให้เช่า</span>'}</td>
+      <td class="hide-sm" style="color:var(--muted)">${esc(r.note)}</td>
+      <td class="num" style="white-space:nowrap">
+        <button class="btn sm" data-edit="${r.id}">แก้ไข</button>
+        <button class="btn sm dang" data-del="${r.id}" ${used ? `title="มี ${used} รายการเช่า"` : ''}>ลบ</button>
+      </td></tr>`;
+  }).join('');
+  $('#roomRows').innerHTML = rows || `<tr><td colspan="7" class="empty">ยังไม่มีห้องพัก — กด "+ เพิ่มห้อง" เพื่อเริ่ม</td></tr>`;
+  $$('[data-edit]').forEach(b => b.onclick = () => openRoom(b.dataset.edit));
+  $$('[data-del]').forEach(b => b.onclick = () => delRoom(b.dataset.del));
+}
+let editingRoom = null;
+// ประเภทห้อง: ค่าเริ่มต้น + ที่เคยใช้ + เพิ่มใหม่เอง
+const ROOM_TYPES = ['ห้องเตียงเดี่ยว', 'ห้องเตียงคู่', 'ห้องแฟมิลี่', 'ห้องพัดลม', 'ห้องแอร์', 'ห้องรายเดือน'];
+const NEW_TYPE = '__new__';
+function fillTypeSelect(cur) {
+  const f = $('#roomForm');
+  const types = [...new Set([...ROOM_TYPES, ...db.rooms.map(r => r.type).filter(Boolean), ...(cur ? [cur] : [])])];
+  f.type.innerHTML = `<option value="">— เลือกประเภท —</option>`
+    + types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')
+    + `<option value="${NEW_TYPE}">+ เพิ่มประเภทใหม่…</option>`;
+  f.type.value = cur; f.typeNew.value = ''; f.typeNew.hidden = true; f.typeNew.required = false;
+}
+$('#roomForm').type.onchange = e => {
+  const f = $('#roomForm'), isNew = e.target.value === NEW_TYPE;
+  f.typeNew.hidden = !isNew; f.typeNew.required = isNew;
+  if (isNew) f.typeNew.focus();
+};
+function openRoom(id) {
+  editingRoom = id || null;
+  const r = id ? roomById(id) : { status: 'open' };
+  const f = $('#roomForm');
+  ['name', 'price', 'capacity', 'status', 'note'].forEach(k => f[k].value = r[k] ?? '');
+  fillTypeSelect(r.type || '');
+  $('#roomFormTitle').textContent = id ? 'แก้ไขห้อง' : 'เพิ่มห้อง';
+  $('#roomMask').classList.add('on'); f.name.focus();
+}
+$('#btnAddRoom').onclick = () => openRoom();
+$('#roomForm').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target;
+  const r = {
+    name: f.name.value.trim(), type: f.type.value === NEW_TYPE ? f.typeNew.value.trim() : f.type.value,
+    price: Number(f.price.value) || 0, capacity: Number(f.capacity.value) || 0,
+    status: f.status.value, note: f.note.value.trim(),
+  };
+  if (editingRoom) Object.assign(roomById(editingRoom), r);
+  else db.rooms.push({ id: uid(), ...r });
+  $('#roomMask').classList.remove('on'); save(); renderRooms();
+};
+async function delRoom(id) {
+  const r = roomById(id), used = db.entries.filter(e => e.roomId === id).length;
+  const msg = used ? `ลบห้อง "${r.name}" และรายการเช่าของห้องนี้ ${used} รายการ?` : `ลบห้อง "${r.name}"?`;
+  if (!await ask(msg, 'ลบ', 'ยกเลิก', true)) return;
+  db.rooms = db.rooms.filter(x => x.id !== id);
+  db.entries = db.entries.filter(e => e.roomId !== id);
+  save(); renderRooms();
+}
+
+// ---------- calendar ----------
+function renderCal() {
+  $('#calTitle').textContent = `${TH_MONTHS[calM]} ${be(calY)}`;
+  const first = new Date(calY, calM, 1);
+  const start = new Date(calY, calM, 1 - first.getDay());
+  const byDate = {};
+  db.entries.forEach(e => (byDate[e.date] ||= []).push(e));
+  let html = TH_DOW.map(d => `<div class="h">${d}</div>`).join('');
+  let monthSum = 0;
+  const cells = Math.ceil((first.getDay() + new Date(calY, calM + 1, 0).getDate()) / 7) * 7;
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const key = ymd(d), list = byDate[key] || [];
+    const sum = list.reduce((a, e) => a + (+e.amount || 0), 0);
+    const inMonth = d.getMonth() === calM;
+    if (inMonth) monthSum += sum;
+    const chips = list.slice(0, 4).map(e => {
+      const r = roomById(e.roomId);
+      return `<div class="chip ${e.paid ? '' : 'pend'}" style="background:${e.paid ? roomColor(e.roomId) : 'var(--danger)'}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
+    }).join('') + (list.length > 4 ? `<div style="font-size:11px;color:var(--muted)">+${list.length - 4} รายการ</div>` : '');
+    html += `<div class="d ${inMonth ? '' : 'other'} ${key === ymd(today) ? 'today' : ''}" data-date="${key}">
+      <div class="dn"><span>${d.getDate()}</span>${sum ? `<span class="sum">${baht(sum)}</span>` : ''}</div>${chips}</div>`;
+  }
+  $('#cal').innerHTML = html;
+  $('#calMonthSum').textContent = 'รวมเดือนนี้ ' + baht(monthSum);
+  $$('#cal .d').forEach(c => c.onclick = () => openDay(c.dataset.date));
+  $('#calLegend').innerHTML = db.rooms.map(r => `<span><span class="dot" style="background:${roomColor(r.id)}"></span>${esc(r.name)}</span>`).join('')
+    + (db.rooms.length ? '<span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
+}
+$('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } renderCal(); };
+$('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } renderCal(); };
+$('#calToday').onclick = () => { calY = today.getFullYear(); calM = today.getMonth(); renderCal(); };
+
+let curDay = null, editingEntry = null;
+function openDay(date) {
+  curDay = date; resetEntryForm();
+  const d = parseYmd(date);
+  $('#dayTitle').textContent = `${TH_DOW[d.getDay()]}. ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${be(d.getFullYear())}`;
+  renderDayList();
+  $('#dayMask').classList.add('on');
+}
+function renderDayList() {
+  const list = db.entries.filter(e => e.date === curDay);
+  const booked = new Set(list.map(e => e.roomId));
+  const open = db.rooms.filter(r => r.status !== 'closed');
+  const free = open.filter(r => !booked.has(r.id)).map(r => r.name);
+  $('#dayList').innerHTML = (list.length ? `<table><tbody>${list.map(e => {
+    const r = roomById(e.roomId);
+    return `<tr ${e.id === editingEntry ? 'style="background:var(--accent-soft)"' : ''}><td><span class="dot" style="background:${roomColor(e.roomId)}"></span><b>${esc(r?.name || '?')}</b>
+      <div style="font-size:13px;color:var(--muted)">${esc(e.guest || '-')}${e.channel ? ' · ' + esc(e.channel) : ''}${e.note ? ' · ' + esc(e.note) : ''}</div></td>
+      <td class="num">${baht(e.amount)}<div><button type="button" class="tag ${e.paid ? 'ok' : 'due'}" style="border:0;cursor:pointer;font:inherit;font-size:12px" data-epay="${e.id}" title="กดเพื่อสลับสถานะ">${e.paid ? 'ชำระแล้ว ✓' : 'ค้างชำระ → กดเมื่อชำระ'}</button></div></td>
+      <td class="num" style="white-space:nowrap"><button class="btn sm" data-eedit="${e.id}">แก้ไข</button> <button class="btn sm dang" data-edel="${e.id}">ลบ</button></td></tr>`;
+  }).join('')}</tbody></table>` : '<div class="empty" style="padding:10px">ยังไม่มีรายการในวันนี้</div>')
+    + (open.length ? `<div style="font-size:13px;color:var(--muted);margin-top:8px">ห้องว่าง: ${free.length ? esc(free.join(', ')) : 'เต็มทุกห้อง'}</div>` : '');
+  $$('[data-eedit]').forEach(b => b.onclick = () => editEntry(b.dataset.eedit));
+  $$('[data-epay]').forEach(b => b.onclick = async () => {
+    const e = db.entries.find(x => x.id === b.dataset.epay);
+    await applyToEntry(e, { paid: !e.paid });
+    save(); renderDayList(); renderCal();
+  });
+  $$('[data-edel]').forEach(b => b.onclick = async () => {
+    if (!await ask('ลบรายการนี้?', 'ลบ', 'ยกเลิก', true)) return;
+    db.entries = db.entries.filter(e => e.id !== b.dataset.edel);
+    save(); renderDayList(); renderCal();
+  });
+}
+// จองทีละวัน (วันที่เลือกในปฏิทิน)
+const stayDates = () => [curDay];
+// ห้องที่ถูกจองแล้วในช่วงวันที่ → roomId: วันแรกที่ชน (ไม่นับรายการที่กำลังแก้)
+function bookedRooms(dates) {
+  const m = new Map();
+  db.entries.forEach(e => { if (e.id !== editingEntry && dates.includes(e.date) && !m.has(e.roomId)) m.set(e.roomId, e.date); });
+  return m;
+}
+// ห้องที่จองแล้ว / ปิดปรับปรุง → เลือกไม่ได้
+function fillRoomSelect(sel) {
+  const f = $('#entryForm'), dates = stayDates(), booked = bookedRooms(dates);
+  const why = r => r.status === 'closed' ? 'ปิดปรับปรุง'
+    : booked.has(r.id) ? (booked.get(r.id) === curDay ? 'จองแล้ว' : `จองแล้ว ${+booked.get(r.id).slice(8)} ${TH_MON[+booked.get(r.id).slice(5, 7) - 1]}`) : '';
+  f.roomId.innerHTML = db.rooms.map(r => `<option value="${r.id}" ${why(r) ? 'disabled' : ''}>${esc(r.name)}${why(r) ? ` (${why(r)})` : ''}</option>`).join('');
+  const free = db.rooms.filter(r => !why(r));
+  const prev = f.roomId.dataset.cur;
+  f.roomId.value = free.some(r => r.id === sel) ? sel : (free[0]?.id || '');
+  f.roomId.dataset.cur = f.roomId.value;
+  if (!editingEntry && f.roomId.value !== prev) f.amount.value = roomById(f.roomId.value)?.price || '';
+  const full = !free.length;
+  $('#entrySubmit').disabled = full;
+  $('#roomHint').innerHTML = !db.rooms.length ? ''
+    : full ? `<span style="color:var(--danger)">ไม่มีห้องว่างในวันนี้</span>`
+    : `<span style="color:var(--muted)">ว่าง ${free.length}/${db.rooms.length} ห้อง</span>`;
+}
+function resetEntryForm() {
+  editingEntry = null;
+  const f = $('#entryForm'); f.reset(); delete f.roomId.dataset.cur;
+  fillRoomSelect();
+  $('#entryFormTitle').textContent = 'เพิ่มรายการเช่า';
+  $('#entryCancel').hidden = true;
+  if (!db.rooms.length) $('#entryFormTitle').textContent = 'เพิ่มห้องที่ "จัดการห้องพัก" ก่อน';
+}
+function editEntry(id) {
+  const e = db.entries.find(x => x.id === id), f = $('#entryForm');
+  editingEntry = id;
+  fillRoomSelect(e.roomId);
+  f.guest.value = e.guest || ''; f.amount.value = e.amount; f.paid.value = e.paid ? '1' : '0';
+  f.channel.value = e.channel || ''; f.note.value = e.note || '';
+  $('#entryFormTitle').textContent = `แก้ไขรายการ: ${roomById(e.roomId)?.name || '?'}${e.guest ? ' · ' + e.guest : ''}`;
+  $('#entryCancel').hidden = false;
+  renderDayList(); f.paid.focus();
+}
+// จองหลายคืน (group เดียวกัน) → ถามว่าจะใช้กับทุกคืนไหม
+async function applyToEntry(e, patch) {
+  const sibs = e.group ? db.entries.filter(x => x.group === e.group && x.id !== e.id) : [];
+  const targets = sibs.length && await ask(`รายการนี้เป็นการจอง ${sibs.length + 1} คืน — ใช้กับทุกคืนของการจองนี้ไหม?`, 'ทุกคืน', 'เฉพาะวันนี้') ? [e, ...sibs] : [e];
+  targets.forEach(t => Object.assign(t, patch));
+}
+$('#entryCancel').onclick = () => { resetEntryForm(); renderDayList(); };
+$('#entryForm').roomId.onchange = e => { e.target.dataset.cur = e.target.value; if (!editingEntry) $('#entryForm').amount.value = roomById(e.target.value)?.price || ''; };
+$('#entryForm').onsubmit = async ev => {
+  ev.preventDefault();
+  const f = ev.target;
+  const base = { roomId: f.roomId.value, guest: f.guest.value.trim(), amount: Number(f.amount.value) || 0,
+    paid: f.paid.value === '1', channel: f.channel.value, note: f.note.value.trim() };
+  if (editingEntry) {
+    await applyToEntry(db.entries.find(x => x.id === editingEntry), base);
+  } else {
+    // กันจองซ้อน: ห้องที่จองแล้วในช่วงนี้บันทึกไม่ได้
+    const dates = stayDates();
+    if (!base.roomId || bookedRooms(dates).has(base.roomId)) { toast('ห้องนี้ถูกจองแล้วในช่วงวันที่เลือก'); return fillRoomSelect(); }
+    db.entries.push({ id: uid(), date: curDay, ...base });
+  }
+  save(); resetEntryForm(); renderDayList(); renderCal();
+};
+
+// ---------- summary ----------
+function initSummaryFilters() {
+  const years = new Set([today.getFullYear(), ...db.entries.map(e => +e.date.slice(0, 4))]);
+  const ys = $('#sumYear'), ms = $('#sumMonth');
+  const prevY = ys.value, prevM = ms.value;
+  ys.innerHTML = [...years].sort((a, b) => b - a).map(y => `<option value="${y}">${be(y)}</option>`).join('');
+  ms.innerHTML = `<option value="all">ทั้งปี</option>` + TH_MONTHS.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  ys.value = prevY && years.has(+prevY) ? prevY : today.getFullYear();
+  ms.value = prevM || String(today.getMonth());
+}
+$('#sumYear').onchange = $('#sumMonth').onchange = () => renderSummary(true);
+
+function renderSummary(keep) {
+  if (keep !== true) initSummaryFilters();
+  const y = +$('#sumYear').value, mv = $('#sumMonth').value, m = mv === 'all' ? null : +mv;
+  const inYear = db.entries.filter(e => +e.date.slice(0, 4) === y);
+  const sel = m === null ? inYear : inYear.filter(e => +e.date.slice(5, 7) - 1 === m);
+  const days = m === null ? ((y % 4 === 0 && y % 100) || y % 400 === 0 ? 366 : 365) : new Date(y, m + 1, 0).getDate();
+  const total = sel.reduce((a, e) => a + (+e.amount || 0), 0);
+  const paid = sel.filter(e => e.paid).reduce((a, e) => a + (+e.amount || 0), 0);
+  const nights = sel.length;
+  const openRooms = db.rooms.filter(r => r.status !== 'closed').length || db.rooms.length;
+  const occ = openRooms ? nights / (openRooms * days) * 100 : 0;
+  const period = m === null ? `ปี ${be(y)}` : `${TH_MONTHS[m]} ${be(y)}`;
+
+  $('#kpis').innerHTML = [
+    ['รายได้รวม', baht(total), period],
+    ['ชำระแล้ว', baht(paid), `<span style="color:var(--danger)">ค้างชำระ ${baht(total - paid)}</span>`],
+    ['จำนวนคืนที่เข้าพัก', nights.toLocaleString('th-TH') + ' คืน', `${new Set(sel.map(e => e.guest).filter(Boolean)).size} ผู้เข้าพัก`],
+    ['อัตราเข้าพัก', occ.toFixed(1) + '%', `${openRooms} ห้อง × ${days} วัน`],
+    ['เฉลี่ยต่อคืน', baht(nights ? total / nights : 0), 'ADR'],
+  ].map(([l, v, s]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+
+  // เลือกเดือน → รายได้รายวัน · ทั้งปี → จำนวนคืนรายเดือน
+  if (m !== null) {
+    $('#chDailyTitle').textContent = `รายได้รายวัน · ${period}`;
+    const vals = Array.from({ length: days }, (_, i) => sel.filter(e => +e.date.slice(8) === i + 1).reduce((a, e) => a + (+e.amount || 0), 0));
+    $('#chDaily').innerHTML = barChart(vals.map((_, i) => String(i + 1)), vals, i => `${i + 1} ${TH_MON[m]}`, 5);
+  } else {
+    $('#chDailyTitle').textContent = `จำนวนคืนที่เข้าพักรายเดือน · ${period}`;
+    const vals = TH_MON.map((_, i) => inYear.filter(e => +e.date.slice(5, 7) - 1 === i).length);
+    $('#chDaily').innerHTML = barChart(TH_MON, vals, i => TH_MONTHS[i], 1, v => v + ' คืน');
+  }
+  $('#chMonthlyTitle').textContent = `รายได้รายเดือน · ปี ${be(y)}`;
+  const mvals = TH_MON.map((_, i) => inYear.filter(e => +e.date.slice(5, 7) - 1 === i).reduce((a, e) => a + (+e.amount || 0), 0));
+  $('#chMonthly').innerHTML = barChart(TH_MON, mvals, i => TH_MONTHS[i], 1, baht, m);
+
+  const per = db.rooms.map(r => {
+    const es = sel.filter(e => e.roomId === r.id);
+    return { r, sum: es.reduce((a, e) => a + (+e.amount || 0), 0), n: es.length };
+  }).sort((a, b) => b.sum - a.sum);
+  const maxR = Math.max(1, ...per.map(p => p.sum));
+  $('#chRooms').innerHTML = per.length ? per.map(p => `<div class="hbar" data-tip="${esc(p.r.name)}|${baht(p.sum)}|${p.n} คืน · อัตราเข้าพัก ${(p.n / days * 100).toFixed(0)}%">
+      <div class="nm">${esc(p.r.name)}</div>
+      <div class="track"><div class="fill" style="width:${p.sum / maxR * 100}%;background:${roomColor(p.r.id)}"></div></div>
+      <div class="val">${baht(p.sum)}<div style="font-size:11px;color:var(--muted)">${p.n} คืน</div></div></div>`).join('')
+    : '<div class="empty">ยังไม่มีห้อง</div>';
+
+  $('#chPaid').innerHTML = donut([
+    ['ชำระแล้ว', paid, 'var(--accent)'],
+    ['ค้างชำระ', total - paid, 'var(--danger)'],
+  ], baht(total));
+}
+
+function barChart(labels, vals, tip, every = 1, fmt = baht, hi = null) {
+  const W = 560, H = 220, L = 52, B = 24, T = 10, R = 8;
+  const max = niceMax(Math.max(...vals, 0));
+  const bw = (W - L - R) / vals.length;
+  let g = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = max * i / 4, y = H - B - (H - B - T) * i / 4;
+    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text x="${L - 6}" y="${y + 4}" text-anchor="end">${short(v)}</text>`;
+  }
+  vals.forEach((v, i) => {
+    const h = max ? (H - B - T) * v / max : 0, x = L + i * bw;
+    // ทั้งคอลัมน์เป็นพื้นที่ hover (แท่งเตี้ยก็ชี้โดน)
+    g += `<g class="col" data-tip="${esc(tip(i))}|${esc(fmt(v))}"><rect class="hit" x="${x}" y="${T}" width="${bw}" height="${H - B - T}" fill="transparent"/>`
+      + (v ? `<rect class="bar" x="${x + bw * 0.15}" y="${H - B - h}" width="${bw * 0.7}" height="${h}" rx="2" ${hi !== null && hi !== i ? 'opacity=".35"' : ''}/>` : '') + '</g>';
+    if (i % every === 0)
+      g += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${esc(labels[i])}</text>`;
+  });
+  const empty = !vals.some(Boolean);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">${g}${empty ? `<text x="${(W + L) / 2}" y="${H / 2}" text-anchor="middle">ยังไม่มีข้อมูล</text>` : ''}</svg>`;
+}
+function niceMax(v) {
+  if (v <= 0) return 0;
+  const p = 10 ** Math.floor(Math.log10(v)), n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+function short(v) { return v >= 1e6 ? (v / 1e6).toFixed(v % 1e6 ? 1 : 0) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(v % 1e3 ? 1 : 0) + 'k' : String(Math.round(v)); }
+function donut(parts, center) {
+  const tot = parts.reduce((a, p) => a + p[1], 0), r = 54, c = 2 * Math.PI * r;
+  let off = 0, arcs = '';
+  if (tot) parts.forEach(([l, v, col]) => {
+    const len = v / tot * c;
+    arcs += `<circle r="${r}" cx="70" cy="70" fill="none" stroke="${col}" stroke-width="20" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" data-tip="${esc(l)}|${baht(v)}|${(v / tot * 100).toFixed(0)}%"/>`;
+    off += len;
+  });
+  else arcs = `<circle r="${r}" cx="70" cy="70" fill="none" stroke="var(--line)" stroke-width="20"/>`;
+  return `<div class="donut"><svg viewBox="0 0 140 140" width="150">${arcs}
+    <text x="70" y="74" text-anchor="middle" style="font-size:14px;font-weight:700;fill:var(--ink)">${esc(center)}</text></svg>
+    <div>${parts.map(([l, v, col]) => `<div style="margin:6px 0"><span class="dot" style="background:${col}"></span>${l} <b>${baht(v)}</b>
+    <span style="color:var(--muted)">${tot ? (v / tot * 100).toFixed(0) : 0}%</span></div>`).join('')}</div></div>`;
+}
+
+// tooltip: data-tip="หัวข้อ|ค่า|รายละเอียด"
+document.addEventListener('mousemove', ev => {
+  const el = ev.target.closest?.('[data-tip]'), t = $('#tip');
+  if (!el || !el.closest('#tab-summary')) { t.style.display = 'none'; return; }
+  const [head, val, more] = el.dataset.tip.split('|');
+  t.innerHTML = `${esc(head)}<br><b>${esc(val)}</b>${more ? '<br>' + esc(more) : ''}`;
+  t.style.display = 'block';
+  const w = t.offsetWidth, h = t.offsetHeight;
+  t.style.left = Math.min(ev.clientX + 14, innerWidth - w - 8) + 'px';
+  t.style.top = (ev.clientY - h - 12 < 4 ? ev.clientY + 16 : ev.clientY - h - 12) + 'px';
+});
+
+// ---------- start ----------
+(async () => {
+  await load();
+  await showUser();
+  let tab = 'calendar';
+  try { tab = localStorage.getItem('banrimphoo.tab') || (db.rooms.length ? 'calendar' : 'rooms'); } catch {}
+  show(['rooms', 'calendar', 'summary'].includes(tab) ? tab : 'calendar');
+})();
+</script>
+</body>
+</html>

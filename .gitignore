@@ -1,0 +1,9 @@
+# ข้อมูลจริง + บัญชีล็อกอิน — ห้ามขึ้น git
+data.json
+auth.json
+sessions.json
+backups/
+*.tmp
+
+__pycache__/
+.DS_Store
