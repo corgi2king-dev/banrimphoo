@@ -22,9 +22,10 @@ while [ $# -gt 0 ]; do
 done
 
 UP=/tmp/banrimphoo-upload
-CODE=(serve.py xlsx_export.py index.html login.html scene.js)
-FILES=("${CODE[@]}")
-[ -f photo.jpg ] && FILES+=(photo.jpg)
+CODE=(serve.py xlsx_export.py)
+WEB=(public/index.html public/login.html public/scene.js)
+FILES=("${CODE[@]}" "${WEB[@]}")
+[ -f public/photo.jpg ] && FILES+=(public/photo.jpg)
 [ -n "$DOMAIN" ] && FILES+=(deploy/setup.sh)
 if [ "$WITH_DATA" = 1 ]; then
   for f in rooms.json auth.json entries expenses; do [ -e "$f" ] && FILES+=("$f"); done
@@ -38,7 +39,9 @@ ssh -t "$TARGET" "set -e
   cd $UP
   if [ -f setup.sh ]; then sudo bash setup.sh '$DOMAIN'; fi
   sudo install -m 644 ${CODE[*]} /opt/banrimphoo/
-  if [ -f photo.jpg ]; then sudo install -m 644 photo.jpg /opt/banrimphoo/; fi
+  sudo install -d -m 755 /opt/banrimphoo/public
+  sudo install -m 644 index.html login.html scene.js /opt/banrimphoo/public/
+  if [ -f photo.jpg ]; then sudo install -m 644 photo.jpg /opt/banrimphoo/public/; fi
   D=/var/lib/banrimphoo
   if [ -f rooms.json ]; then
     if sudo test -f \$D/rooms.json; then echo 'ข้ามข้อมูลห้อง/การจอง (มีบนเซิร์ฟเวอร์แล้ว ไม่เขียนทับ)';

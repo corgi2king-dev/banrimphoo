@@ -1,0 +1,18 @@
+{
+  "name": "banrimphoo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8788 --ip 127.0.0.1",
+    "db:local": "wrangler d1 execute banrimphoo --local --file worker/reset-data.sql && wrangler d1 execute banrimphoo --local --file worker/schema.sql && python3 scripts/to-d1-sql.py > .d1-import.sql && wrangler d1 execute banrimphoo --local --file .d1-import.sql && rm .d1-import.sql",
+    "user:local": "node scripts/create-user.mjs --local",
+    "db:init": "wrangler d1 execute banrimphoo --remote --file worker/schema.sql",
+    "db:import": "python3 scripts/to-d1-sql.py > .d1-import.sql && wrangler d1 execute banrimphoo --remote --file .d1-import.sql && rm .d1-import.sql",
+    "user": "node scripts/create-user.mjs --remote",
+    "deploy": "wrangler deploy",
+    "backup": "wrangler d1 export banrimphoo --remote --output backup-$(date +%Y-%m-%d).sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}

@@ -11,3 +11,9 @@ backups/
 
 __pycache__/
 .DS_Store
+
+# Cloudflare / npm
+node_modules/
+.wrangler/
+.d1-import.sql
+backup-*.sql

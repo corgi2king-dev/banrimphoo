@@ -32,6 +32,7 @@ from urllib.parse import parse_qs, urlparse
 import xlsx_export
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_DIR = os.path.join(ROOT, "public")  # หน้าเว็บ (ใช้ร่วมกับ Cloudflare Worker)
 STORE = os.environ.get("BANRIMPHOO_DIR", ROOT)
 DATA = os.path.join(STORE, "data.json")  # รูปแบบเก่า (ไฟล์เดียว) — ใช้แค่ตอนย้ายข้อมูล
 ROOMS = os.path.join(STORE, "rooms.json")
@@ -227,7 +228,7 @@ class Handler(SimpleHTTPRequestHandler):
         return cookie(tok, SESSION_TTL)
 
     def _static(self, name):
-        path = os.path.join(ROOT, name)
+        path = os.path.join(PUBLIC_DIR, name)
         if not os.path.exists(path):
             return self._json(404, {"error": "not found"})
         with open(path, "rb") as f:
@@ -238,6 +239,31 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def _apply_changes(self, ch):
+        """{"upsert": {kind: [...]}, "delete": {kind: [id...]}, "roomOrder": [id...]} — แก้ทีละรายการ ไม่ทับของคนอื่น"""
+        kinds = ("rooms", "entries", "expenses")
+        up, de = ch.get("upsert") or {}, ch.get("delete") or {}
+        for k in kinds:
+            if not isinstance(up.get(k, []), list) or not isinstance(de.get(k, []), list):
+                return self._json(400, {"error": f"{k} ต้องเป็น list"})
+            if not all(isinstance(x, dict) and x.get("id") for x in up.get(k, [])):
+                return self._json(400, {"error": f"{k} ทุกรายการต้องมี id"})
+            if k != "rooms" and not all(DATE.match(str(x.get("date", ""))) for x in up.get(k, [])):
+                return self._json(400, {"error": f"{k} ต้องมี date แบบ YYYY-MM-DD"})
+        with lock:
+            db = load_db()
+            for k in kinds:
+                gone = set(de.get(k, []))
+                byid = {x["id"]: x for x in db[k] if x["id"] not in gone}
+                for x in up.get(k, []):
+                    byid[x["id"]] = x
+                db[k] = list(byid.values())
+            order = {rid: i for i, rid in enumerate(ch.get("roomOrder") or [])}
+            db["rooms"].sort(key=lambda r: order.get(r["id"], len(order)))
+            backup_data()
+            save_db(db)
+        return self._json(200, {"ok": True})
 
     def _export(self):
         period = parse_qs(urlparse(self.path).query).get("period", [""])[0]
@@ -340,6 +366,9 @@ class Handler(SimpleHTTPRequestHandler):
                     sessions.pop(t)  # เครื่องอื่นต้องล็อกอินใหม่
                 save_sessions()
             return self._json(200, {"ok": True})
+
+        if p == "/api/changes":
+            return self._apply_changes(body)
 
         if p == "/api/data":
             if not isinstance(body.get("rooms"), list) or not isinstance(body.get("entries"), list):
