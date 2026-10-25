@@ -80,6 +80,9 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .cal .d.today{background:var(--today)}
 .cal .dn{display:flex;justify-content:space-between;font-size:13px}
 .cal .sum{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.cal .avail{margin-top:auto;align-self:flex-end;font-size:11.5px;font-weight:700;line-height:1.5;padding:0 7px;border-radius:99px;
+  background:var(--accent-soft);color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cal .avail.full{background:var(--danger-soft);color:var(--danger)}
 .chip{font-size:11.5px;border-radius:5px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
 .chip.pend{color:#fff}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
@@ -719,6 +722,7 @@ function renderCal() {
   let html = TH_DOW.map(d => `<div class="h">${d}</div>`).join('');
   let monthSum = 0;
   const cells = Math.ceil((first.getDay() + new Date(calY, calM + 1, 0).getDate()) / 7) * 7;
+  const openIds = new Set(db.rooms.filter(r => r.status !== 'closed').map(r => r.id));  // ห้องปิดปรับปรุงไม่นับ
   for (let i = 0; i < cells; i++) {
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const key = ymd(d), list = byDate[key] || [];
@@ -729,14 +733,17 @@ function renderCal() {
       const r = roomById(e.roomId);
       return `<div class="chip ${payState(e) === 'dep' ? 'dep' : e.paid ? '' : 'pend'}" style="background:${payColor(e)}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
     }).join('') + (list.length > 4 ? `<div style="font-size:11px;color:var(--muted)">+${list.length - 4} รายการ</div>` : '');
+    // ห้องว่าง / ทั้งหมด ของวันนั้น
+    const free = openIds.size - new Set(list.map(e => e.roomId).filter(id => openIds.has(id))).size;
+    const avail = openIds.size ? `<div class="avail ${free ? '' : 'full'}" title="ว่าง ${free} จาก ${openIds.size} ห้อง">${free ? `${free}/${openIds.size}` : 'เต็ม'}</div>` : '';
     html += `<div class="d ${inMonth ? '' : 'other'} ${key === ymd(today) ? 'today' : ''}" data-date="${key}">
-      <div class="dn"><span>${d.getDate()}</span>${sum ? `<span class="sum">${baht(sum)}</span>` : ''}</div>${chips}</div>`;
+      <div class="dn"><span>${d.getDate()}</span>${sum ? `<span class="sum">${baht(sum)}</span>` : ''}</div>${chips}${avail}</div>`;
   }
   $('#cal').innerHTML = html;
   $('#calMonthSum').textContent = 'รวมเดือนนี้ ' + baht(monthSum);
   $$('#cal .d').forEach(c => c.onclick = () => openDay(c.dataset.date));
   $('#calLegend').innerHTML = db.rooms.map(r => `<span><span class="dot" style="background:${roomColor(r.id)}"></span>${esc(r.name)}</span>`).join('')
-    + (db.rooms.length ? '<span><span class="dot" style="background:var(--dep)"></span>แถบเหลือง = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
+    + (db.rooms.length ? '<span><span class="avail" style="font-size:11.5px;font-weight:700;padding:0 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)">2/8</span> = ห้องว่าง/ทั้งหมด</span><span><span class="dot" style="background:var(--dep)"></span>แถบเหลือง = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
 }
 $('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } renderCal(); };
 $('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } renderCal(); };
