@@ -27,7 +27,11 @@ body.readonly #entryForm, body.readonly #exForm, body.readonly #btnAddRoom,
 body.readonly [data-eedit], body.readonly [data-edel], body.readonly [data-exedit], body.readonly [data-exdel],
 body.readonly [data-edit], body.readonly [data-del], body.readonly [data-tdbook]{display:none!important}
 body.readonly select.pay{pointer-events:none;background-image:none;padding-right:9px}
-.rolebadge{font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--dep-soft);color:var(--dep-ink);margin-left:4px}
+.rolebadge{font-size:11.5px;padding:1px 8px;border-radius:99px;margin-left:4px;white-space:nowrap}
+.rolebadge.viewer{background:var(--dep-soft);color:var(--dep-ink)}
+.rolebadge.admin{background:var(--accent-soft);color:var(--accent)}
+.usermenu .uline{margin:2px 0}
+.usermenu .uline b{color:var(--ink)}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
 header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 .bar{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -40,7 +44,18 @@ header{background:var(--panel);border-bottom:1px solid var(--line);position:stic
 .hero .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .hero .stats span{background:rgba(0,0,0,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:2px 10px;border-radius:99px;font-size:13px;text-shadow:none}
 @media (max-width:640px){.hero{height:120px}.hero .txt b{font-size:18px}}
-.user{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.user{position:relative;display:flex;align-items:center;gap:8px}
+/* ชื่อ + ตำแหน่ง แสดงข้างปุ่มบัญชีตลอด */
+.uinfo{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25;font-size:13px}
+.uinfo b{color:var(--ink);font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uinfo .rolebadge{margin:2px 0 0;font-size:11px;padding:0 7px}
+/* ปุ่มบัญชีมุมขวาบน (ตัวอักษรแรกของชื่อ) → เมนูเล็ก: ชื่อ · เปลี่ยนรหัสผ่าน · ออกจากระบบ */
+.userbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font:inherit;font-weight:700;font-size:15px;cursor:pointer;padding:0}
+.userbtn:hover,.userbtn[aria-expanded="true"]{border-color:var(--accent)}
+.usermenu{position:absolute;right:0;top:calc(100% + 6px);min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;z-index:40;display:flex;flex-direction:column}
+.usermenu .uname{padding:8px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;white-space:nowrap}
+.usermenu button{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.usermenu button:hover{background:var(--bg)}
 .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 nav{display:flex;gap:4px}
 nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
@@ -167,6 +182,9 @@ nav{overflow-x:auto;max-width:100%;scrollbar-width:none}
 nav button{white-space:nowrap}
 
 @media (max-width:640px){
+  .bar{gap:10px}
+  .user{order:2} nav{order:3;width:100%}
+  .brand small{display:none}
   .hbar.guest{grid-template-columns:26px 1fr 80px}.hbar.guest .track{display:none}
   nav button{padding:6px 9px;font-size:13.5px}
   .cal .d{min-height:70px;padding:3px}
@@ -190,9 +208,13 @@ nav button{white-space:nowrap}
       <button data-tab="history">🕘 ประวัติ</button>
     </nav>
     <div class="user" id="userBox" hidden>
-      <span id="userName"></span>
-      <button class="btn sm" id="btnPw">เปลี่ยนรหัสผ่าน</button>
-      <button class="btn sm" id="btnLogout">ออกจากระบบ</button>
+      <div class="uinfo" id="userInfo"></div>
+      <button class="userbtn" id="userBtn" aria-haspopup="menu" aria-expanded="false" title="บัญชีผู้ใช้"></button>
+      <div class="usermenu" id="userMenu" role="menu" hidden>
+        <div class="uname" id="userName"></div>
+        <button id="btnPw" role="menuitem">🔑 เปลี่ยนรหัสผ่าน</button>
+        <button id="btnLogout" role="menuitem">🚪 ออกจากระบบ</button>
+      </div>
     </div>
   </div>
 </header>
@@ -517,9 +539,21 @@ async function showUser() {
   try {
     const user = serverUser || (await (await fetch('api/me', { cache: 'no-store' })).json()).user;
     if (!user) return toLogin();
-    $('#userName').innerHTML = '👤 ' + esc(user) + (READONLY ? '<span class="rolebadge">ดูอย่างเดียว</span>' : ''); $('#userBox').hidden = false;
+    $('#userBtn').textContent = user.trim().charAt(0).toUpperCase() || '👤';
+    // ชื่อ + ตำแหน่ง (admin = ผู้ดูแลระบบ · viewer = ดูอย่างเดียว)
+    $('#userName').innerHTML = `<div class="uline">👤 <b>${esc(user)}</b></div>`
+      + `<div class="uline">ตำแหน่ง <span class="rolebadge ${READONLY ? 'viewer' : 'admin'}">${READONLY ? 'viewer · ดูอย่างเดียว' : 'admin · ผู้ดูแลระบบ'}</span></div>`;
+    $('#userBtn').title = `${user} (${READONLY ? 'viewer' : 'admin'})`;
+    $('#userInfo').innerHTML = `<b>${esc(user)}</b><span class="rolebadge ${READONLY ? 'viewer' : 'admin'}">${READONLY ? 'viewer' : 'admin'}</span>`;
+    $('#userBox').hidden = false;
   } catch {}
 }
+// เปิด/ปิดเมนูบัญชี · กดที่อื่นหรือ Esc = ปิด · เลือกเมนูแล้วปิดเอง
+const userMenu = open => { $('#userMenu').hidden = !open; $('#userBtn').setAttribute('aria-expanded', String(open)); };
+$('#userBtn').onclick = e => { e.stopPropagation(); userMenu($('#userMenu').hidden); };
+document.addEventListener('click', e => { if (!e.target.closest('#userBox')) userMenu(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') userMenu(false); });
+$('#userMenu').addEventListener('click', e => { if (e.target.closest('button')) userMenu(false); });
 $('#btnLogout').onclick = async () => {
   if (!await ask('ออกจากระบบ?', 'ออกจากระบบ')) return;
   await fetch('api/logout', { method: 'POST' }).catch(() => {});
