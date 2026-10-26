@@ -552,12 +552,11 @@ function renderHero() {
   const open = db.rooms.filter(r => r.status !== 'closed').length;
   const booked = new Set(list.map(e => e.roomId)).size;
   const ym = k.slice(0, 7), month = db.entries.filter(e => e.date.startsWith(ym));
-  const due = db.entries.reduce((a, e) => a + remaining(e), 0);
   $('#heroStats').innerHTML = [
     `🛏 คืนนี้เข้าพัก ${booked}/${open} ห้อง`,
     `💵 วันนี้ ${baht(list.reduce((a, e) => a + (+e.amount || 0), 0))}`,  // ค่าเช่าคืนนี้ (ตามการจอง)
     `💰 เดือนนี้ ${baht(month.reduce((a, e) => a + (+e.amount || 0), 0))}`,
-    due ? `⚠️ ค้างชำระ ${baht(due)}` : '✓ ไม่มีค้างชำระ',
+    `📈 ปีนี้ ${baht(db.entries.filter(e => e.date.startsWith(k.slice(0, 4))).reduce((a, e) => a + (+e.amount || 0), 0))}`,  // ม.ค.–ธ.ค. ปีปัจจุบัน
   ].map(t => `<span>${t}</span>`).join('');
 }
 let curTab = 'today';
