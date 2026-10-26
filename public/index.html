@@ -181,9 +181,12 @@ svg .grid{stroke:var(--line)}
 nav{overflow-x:auto;max-width:100%;scrollbar-width:none}
 nav button{white-space:nowrap}
 
+/* จอที่เมนูเรียงแถวเดียวไม่พอ (มือถือ / tablet / iPad): แถว 1 = โลโก้ + ชื่อ/ตำแหน่ง มุมขวาบน · แถว 2 = เมนูเต็มความกว้าง */
+@media (max-width:1180px){
+  .user{order:2} nav{order:3;width:100%}
+}
 @media (max-width:640px){
   .bar{gap:10px}
-  .user{order:2} nav{order:3;width:100%}
   .brand small{display:none}
   .hbar.guest{grid-template-columns:26px 1fr 80px}.hbar.guest .track{display:none}
   nav button{padding:6px 9px;font-size:13.5px}
