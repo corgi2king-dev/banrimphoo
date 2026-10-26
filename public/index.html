@@ -53,6 +53,7 @@ h2{margin:0;font-size:18px}
 h3{margin:0 0 12px;font-size:15px}
 button.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;font:inherit;cursor:pointer}
 button.btn:hover{border-color:var(--accent)}
+button.btn:disabled{opacity:.4;cursor:default;border-color:var(--line)}
 button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 button.pri:hover{filter:brightness(1.08)}
 button.dang{color:var(--danger)}
@@ -271,6 +272,11 @@ nav button{white-space:nowrap}
           <option value="">ทั้งหมด</option><option value="entries">ค่าเช่า</option><option value="expenses">ค่าใช้จ่าย</option></select></label>
       </div>
       <div id="hiList"></div>
+      <div class="row" id="hiPager" style="justify-content:center;margin-top:12px" hidden>
+        <button class="btn sm" id="hiPgPrev">‹ ก่อนหน้า</button>
+        <span id="hiPgInfo" style="font-size:13.5px;color:var(--muted);min-width:150px;text-align:center"></span>
+        <button class="btn sm" id="hiPgNext">ถัดไป ›</button>
+      </div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px">แสดงตามเวลาที่ทำรายการ (ใหม่สุดก่อน) · บันทึกอัตโนมัติทุกครั้งที่เพิ่ม/แก้/ลบ การจองและค่าใช้จ่าย</div>
     </div>
   </section>
@@ -1029,13 +1035,28 @@ function changesOf(kind, b, a) {
   if (kind === 'entries' && payText(b) !== payText(a)) out.push(`สถานะ: <s>${esc(payText(b))}</s> → <ins>${esc(payText(a))}</ins>`);
   return out.join(' · ');
 }
+// แบ่งหน้า: หน้าละ HI_PER แถว · เปลี่ยนเดือน/ตัวกรอง = กลับหน้า 1 · เปลี่ยนหน้าไม่ต้องโหลดใหม่
+const HI_PER = 10;
+let hiRows = [], hiPage = 1;
 async function renderHistory() {
   $('#hiTitle').textContent = `${TH_MONTHS[hiM]} ${be(hiY)}`;
+  $('#hiPager').hidden = true;
   if (mode !== 'server') { $('#hiList').innerHTML = '<div class="empty">ประวัติใช้ได้เมื่อเปิดผ่านเซิร์ฟเวอร์</div>'; return; }
   $('#hiList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
   const r = await fetch(`api/history?period=${hiY}-${pad(hiM + 1)}`, { cache: 'no-store' });
   if (r.status === 401) return toLogin();
-  const kind = $('#hiKind').value, list = (await r.json()).filter(h => !kind || h.kind === kind);
+  hiRows = r.ok ? await r.json() : [];
+  hiPage = 1;
+  renderHistoryPage();
+}
+function renderHistoryPage() {
+  const kind = $('#hiKind').value, all = hiRows.filter(h => !kind || h.kind === kind);
+  const pages = Math.max(1, Math.ceil(all.length / HI_PER));
+  hiPage = Math.min(Math.max(1, hiPage), pages);
+  const list = all.slice((hiPage - 1) * HI_PER, hiPage * HI_PER);
+  $('#hiPager').hidden = all.length <= HI_PER;
+  $('#hiPgInfo').textContent = `หน้า ${hiPage} / ${pages} · ${all.length} รายการ`;
+  $('#hiPgPrev').disabled = hiPage <= 1; $('#hiPgNext').disabled = hiPage >= pages;
   $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
     const d = new Date(h.at * 1000), e = h.after || h.before;
     return `<div class="hrow"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
@@ -1045,7 +1066,9 @@ async function renderHistory() {
 }
 $('#hiPrev').onclick = () => { if (--hiM < 0) { hiM = 11; hiY--; } renderHistory(); };
 $('#hiNext').onclick = () => { if (++hiM > 11) { hiM = 0; hiY++; } renderHistory(); };
-$('#hiKind').onchange = renderHistory;
+$('#hiKind').onchange = () => { hiPage = 1; renderHistoryPage(); };
+$('#hiPgPrev').onclick = () => { hiPage--; renderHistoryPage(); };
+$('#hiPgNext').onclick = () => { hiPage++; renderHistoryPage(); };
 
 // ---------- summary ----------
 function initSummaryFilters() {
