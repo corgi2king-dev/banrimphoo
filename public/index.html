@@ -376,6 +376,7 @@ nav button{white-space:nowrap}
   <div class="modal" style="max-width:420px">
     <div id="askMsg" style="white-space:pre-line;font-size:16px"></div>
     <input id="askInput" type="number" min="0" step="1" hidden style="margin-top:12px">
+    <select id="askSelect" hidden style="margin-top:12px"></select>
     <div class="row" style="margin-top:18px"><div class="sp"></div>
       <button type="button" class="btn" id="askNo"></button><button type="button" class="btn pri" id="askYes"></button></div>
   </div>
@@ -418,7 +419,15 @@ const paySelect = (state, attrs, depTxt) => `<select class="tag ${state} pay" ${
   <option value="due"${state === 'due' ? ' selected' : ''}>ค้างชำระ</option></select>`;
 // ตั้งสถานะให้ทุกคืนใน nights — มัดจำ: ถามยอด แล้วใส่ให้คืนแรก ๆ ตามลำดับวันจนครบยอด
 async function setPay(nights, v) {
-  if (v === 'ok') nights.forEach(n => Object.assign(n, { paid: true }));
+  if (v === 'ok') {
+    // ชำระแล้ว → ถามช่องทางการชำระ (ตัวเลือกเดียวกับช่อง "ช่องทาง" ในฟอร์มจอง) · ยกเลิก = ไม่เปลี่ยนสถานะ
+    const opts = [...$('#entryForm').channel.options].map(o => [o.value, o.value ? o.textContent : '- ไม่ระบุ']);
+    const cur = nights.find(n => n.channel)?.channel || '';
+    const total = nights.reduce((a, n) => a + remaining(n), 0);
+    const ch = await askChoice(`ชำระแล้ว ${baht(total)}\nช่องทางการชำระ`, opts, cur);
+    if (ch === null) return false;
+    nights.forEach(n => Object.assign(n, { paid: true, channel: ch }));
+  }
   else if (v === 'due') nights.forEach(n => Object.assign(n, { paid: false, deposit: 0 }));
   else {
     const total = nights.reduce((a, n) => a + (+n.amount || 0), 0);
@@ -565,6 +574,16 @@ function closeAsk(v) { $('#askMask').classList.remove('on'); askResolve?.(v); as
 $('#askYes').onclick = () => closeAsk(true);
 $('#askNo').onclick = () => closeAsk(false);
 // askNumber(msg, ค่าเริ่ม) → Promise<number|null>
+// askChoice(msg, ตัวเลือก, ค่าเริ่ม) → Promise<ค่าที่เลือก | null (ยกเลิก)>
+async function askChoice(msg, options, val) {
+  const sel = $('#askSelect');
+  sel.innerHTML = options.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
+  sel.value = val; if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+  sel.hidden = false;
+  const p = ask(msg, 'บันทึก'); setTimeout(() => sel.focus(), 0);
+  const ok = await p; sel.hidden = true;
+  return ok ? sel.value : null;
+}
 async function askNumber(msg, val) {
   const inp = $('#askInput'); inp.hidden = false; inp.value = val;
   const p = ask(msg, 'บันทึก'); setTimeout(() => { inp.focus(); inp.select(); }, 0);
@@ -625,8 +644,9 @@ function renderToday() {
   dueEs.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (roomPos.get(a.roomId) ?? 99) - (roomPos.get(b.roomId) ?? 99));
 
   $('#tdKpis').innerHTML = [
-    ['เข้าพักคืนนี้', `${busy.size}/${open.length} ห้อง`, `รายได้คืนนี้ ${baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0))}`],
-    [isToday ? 'เช็คอินวันนี้' : 'เช็คอิน', `${ins.length} ห้อง`, ins.length ? ins.map(e => roomById(e.roomId)?.name).join(', ') : '-'],
+    // กล่องแรก = รายได้ · กล่องที่สอง = เข้าพักคืนนี้ (+ เช็คอินใหม่กี่ห้อง)
+    [isToday ? 'รายได้คืนนี้' : 'รายได้คืนนั้น', baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0)), `จาก ${busy.size} ห้อง`],
+    [isToday ? 'เข้าพักคืนนี้' : 'เข้าพักคืนนั้น', `${busy.size} ห้อง`, `เช็คอินใหม่ ${ins.length} ห้อง`],
     ['ห้องว่าง', `${free.length} ห้อง`, free.length ? free.map(r => r.name).join(', ') : 'เต็มทุกห้อง'],
     ['ค้างชำระทั้งหมด', `<span style="color:${dueSum ? 'var(--danger)' : 'inherit'}">${baht(dueSum)}</span>`, `${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน`],  // ห้องที่มียอดค้าง · คืนที่ยังไม่จ่ายครบ
   ].filter(Boolean).map(([l, v, sub]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${esc(sub)}</div></div>`).join('');
@@ -640,8 +660,8 @@ function renderToday() {
     const leaving = st.out === addDays(key, 1) ? ` · <b style="display:inline;color:var(--c2)">ออก${isToday ? 'พรุ่งนี้' : 'วันถัดไป'}</b>` : '';
     return `<div class="titem"><span class="dot" style="background:${roomColor(e.roomId)}"></span>
       <div class="who"><b>ห้อง ${esc(r?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}${badge}</b>
-        <span>${st.nights.length} คืน (${shortTh(st.start)} → ออก ${shortTh(st.out)}) · ${baht(st.nights.reduce((a, n) => a + (+n.amount || 0), 0))}${telLink(st.nights.find(n => n.phone)?.phone)}${e.channel ? ' · ' + esc(e.channel) : ''}${leaving}${extra || ''}</span></div>
-      ${paidTag(st.nights)}</div>`;
+        <span>${baht(e.amount)}${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.channel ? ' · ' + esc(e.channel) : ''}${leaving}${extra || ''}</span></div>
+      ${paidTag([e])}</div>`;  // เฉพาะคืนนี้: ยอด/ช่องทาง/สถานะของคืนนี้
   };
   const empty = t => `<div class="empty" style="padding:12px">${t}</div>`;
   // เลื่อนไปดูวันอื่น → ใช้คำว่า "เช็คอิน" + วันที่ แทน "วันนี้"
