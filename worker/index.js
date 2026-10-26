@@ -1,5 +1,6 @@
 // บ้านริมภู · Cloudflare Worker (แทน serve.py เมื่อรันบน Cloudflare)
 // หน้าเว็บอยู่ใน public/ (assets) · ข้อมูลอยู่ใน D1 (binding DB) แยกคอลัมน์ — ดู worker/schema.sql, worker/columns.js
+// สิทธิ์: admin ทำได้ทุกอย่าง · viewer ดูอย่างเดียว (ห้าม /api/changes, /api/history)
 // API เหมือน serve.py: /api/me, /api/login, /api/logout, /api/password, GET /api/data, POST /api/changes, /api/export
 // สร้างผู้ใช้: npm run user (scripts/create-user.mjs) — ไม่มีหน้าตั้งผู้ใช้ครั้งแรกบนเว็บ เพราะเว็บเปิดให้ทุกคนเข้าถึง
 import { buildXlsx } from './xlsx.js';
@@ -14,6 +15,7 @@ const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', 
 // cache: ไฟล์ภาพ/สคริปต์ที่ไม่ใช่ข้อมูล → เก็บไว้ 1 วัน · หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag)
 const CACHE = { '/scene.js': 'public, max-age=86400', '/photo.jpg': 'public, max-age=86400' };
 const KINDS = ['rooms', 'entries', 'expenses'];
+const VIEW_ONLY = 'บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -84,8 +86,10 @@ function readCookie(req) {
 async function session(req, env) {
   const tok = readCookie(req);
   if (!tok) return null;
-  const s = await env.DB.prepare('SELECT user, exp FROM sessions WHERE token = ?').bind(await sha256(tok)).first();
-  return s && s.exp > now() ? { tok, user: s.user } : null;
+  // JOIN users: ผู้ใช้ที่ถูกลบแล้ว session ใช้ไม่ได้ทันที · สิทธิ์ที่ไม่รู้จัก = viewer (ปลอดภัยไว้ก่อน)
+  const s = await env.DB.prepare('SELECT s.user, s.exp, u.role FROM sessions s JOIN users u ON u.username = s.user WHERE s.token = ?')
+    .bind(await sha256(tok)).first();
+  return s && s.exp > now() ? { tok, user: s.user, role: s.role === 'admin' ? 'admin' : 'viewer' } : null;
 }
 async function newSession(env, user) {
   const tok = hex(crypto.getRandomValues(new Uint8Array(32)));
@@ -221,11 +225,11 @@ async function handle(req, env) {
   const s = NO_SESSION.has(p) ? null : await session(req, env);
 
   if (req.method === 'GET') {
-    if (p === '/api/me') return json(200, { user: s?.user || null, setup: false });
+    if (p === '/api/me') return json(200, { user: s?.user || null, role: s?.role || null, setup: false });
     if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
-    if (p === '/api/data') return json(200, { ...await loadDb(env), user: s.user });  // รวมชื่อผู้ใช้มาด้วย ไม่ต้องเรียก /api/me อีกรอบ
+    if (p === '/api/data') return json(200, { ...await loadDb(env), user: s.user, role: s.role });  // รวมชื่อผู้ใช้/สิทธิ์มาด้วย ไม่ต้องเรียก /api/me อีกรอบ
     if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
-  if (p === '/api/history') return history(env, url.searchParams.get('period') || '');
+  if (p === '/api/history') return s.role === 'admin' ? history(env, url.searchParams.get('period') || '') : json(403, { error: VIEW_ONLY });
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });
     const res = await env.ASSETS.fetch(req);
     const out = new Response(res.body, res);
@@ -244,6 +248,7 @@ async function handle(req, env) {
   }
   if (p === '/api/password') return changePassword(env, s, body);
   if (p === '/api/changes') {
+    if (s.role !== 'admin') return json(403, { error: VIEW_ONLY });  // viewer: ห้ามเพิ่ม/แก้/ลบ
     const err = await applyChanges(env, body, s.user);
     return err ? json(400, { error: err }) : json(200, { ok: true });
   }

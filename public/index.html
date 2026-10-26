@@ -21,6 +21,13 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+/* viewer (ดูอย่างเดียว): ซ่อนเมนูและทุกปุ่ม/ฟอร์มที่เพิ่ม แก้ไข ลบ */
+body.readonly nav button[data-tab="rooms"], body.readonly nav button[data-tab="history"],
+body.readonly #entryForm, body.readonly #exForm, body.readonly #btnAddRoom,
+body.readonly [data-eedit], body.readonly [data-edel], body.readonly [data-exedit], body.readonly [data-exdel],
+body.readonly [data-edit], body.readonly [data-del], body.readonly [data-tdbook]{display:none!important}
+body.readonly select.pay{pointer-events:none;background-image:none;padding-right:9px}
+.rolebadge{font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--dep-soft);color:var(--dep-ink);margin-left:4px}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
 header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 .bar{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -415,7 +422,7 @@ const payState = e => e.paid ? 'ok' : (+e.deposit > 0 ? 'dep' : 'due');
 // สีแถบในปฏิทิน: ชำระแล้ว = เขียว · มัดจำ = เหลือง · ค้างชำระ = แดง
 const payColor = e => ({ ok: 'var(--accent)', dep: 'var(--dep)', due: 'var(--danger)' })[payState(e)];
 // dropdown เลือกสถานะ (หน้าตาเป็นป้ายสีตามสถานะ)
-const paySelect = (state, attrs, depTxt) => `<select class="tag ${state} pay" ${attrs} title="เปลี่ยนสถานะการชำระเงิน">
+const paySelect = (state, attrs, depTxt) => `<select class="tag ${state} pay" ${attrs} ${READONLY ? 'disabled' : ''} title="${READONLY ? 'สถานะการชำระเงิน' : 'เปลี่ยนสถานะการชำระเงิน'}">
   <option value="ok"${state === 'ok' ? ' selected' : ''}>ชำระแล้ว ✓</option>
   <option value="dep"${state === 'dep' ? ' selected' : ''}>${state === 'dep' ? esc(depTxt) : 'มัดจำ…'}</option>
   <option value="due"${state === 'due' ? ' selected' : ''}>ค้างชำระ</option></select>`;
@@ -452,7 +459,8 @@ async function load() {
     if (r.status === 401) return toLogin();
     if (!r.ok) throw 0;
     db = await r.json(); mode = 'server'; loadedAt = Date.now();
-    serverUser = db.user || null; delete db.user;
+    serverUser = db.user || null; READONLY = db.role === 'viewer'; delete db.user; delete db.role;
+    document.body.classList.toggle('readonly', READONLY);
   } catch {
     mode = 'local';
     try { db = JSON.parse(localStorage.getItem('banrimphoo') || 'null') || db; } catch {}
@@ -476,6 +484,7 @@ function changes() {
   return ch;
 }
 function save() {
+  if (READONLY) { toast('บัญชีนี้ดูได้อย่างเดียว'); load().then(() => show(curTab)); return Promise.resolve(); }  // กันไว้อีกชั้น (เซิร์ฟเวอร์ก็ปฏิเสธ)
   saving = saving.then(async () => {
     try {
       if (mode === 'server') {
@@ -496,13 +505,13 @@ document.addEventListener('visibilitychange', async () => {
   await saving; await load(); show(curTab);
 });
 function toLogin() { location.replace('/login'); return new Promise(() => {}); }
-let serverUser = null, loadedAt = 0;  // มากับ /api/data — ไม่ต้องเรียก /api/me แยก (ลด 1 รอบ)
+let serverUser = null, loadedAt = 0, READONLY = false;  // READONLY = บัญชี viewer (ดูอย่างเดียว)  // มากับ /api/data — ไม่ต้องเรียก /api/me แยก (ลด 1 รอบ)
 async function showUser() {
   if (mode !== 'server') return;
   try {
     const user = serverUser || (await (await fetch('api/me', { cache: 'no-store' })).json()).user;
     if (!user) return toLogin();
-    $('#userName').textContent = '👤 ' + user; $('#userBox').hidden = false;
+    $('#userName').innerHTML = '👤 ' + esc(user) + (READONLY ? '<span class="rolebadge">ดูอย่างเดียว</span>' : ''); $('#userBox').hidden = false;
   } catch {}
 }
 $('#btnLogout').onclick = async () => {
@@ -546,7 +555,9 @@ function renderHero() {
   ].map(t => `<span>${t}</span>`).join('');
 }
 let curTab = 'today';
+const VIEWER_TABS = ['today', 'calendar', 'expenses', 'summary'];
 function show(tab) {
+  if (READONLY && !VIEWER_TABS.includes(tab)) tab = 'today';
   curTab = tab;
   renderHero();
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));

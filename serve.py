@@ -56,6 +56,7 @@ TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=u
 # photo.jpg = รูปจริงของที่พัก (ไม่บังคับ) ถ้ามีจะใช้เป็นพื้นหลังหน้าล็อกอินแทนภาพวาด
 PUBLIC = {"/login", "/login.html", "/scene.js", "/photo.jpg", "/api/me", "/api/login", "/api/setup"}
 COOKIE = "brp_session"
+VIEW_ONLY = "บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้"
 SESSION_TTL = 7 * 24 * 3600
 ITER = 200_000
 
@@ -247,7 +248,9 @@ class Handler(SimpleHTTPRequestHandler):
         with lock:
             s = sessions.get(tok)
             if s and s["exp"] > time.time():
-                return tok, s
+                u = users().get(s["user"])
+                if u:  # ผู้ใช้ที่ถูกลบแล้ว session ใช้ไม่ได้ · สิทธิ์ที่ไม่รู้จัก = viewer
+                    return tok, {**s, "role": "admin" if u.get("role", "admin") == "admin" else "viewer"}
             if tok in sessions:
                 sessions.pop(tok)
                 save_sessions()
@@ -335,15 +338,17 @@ class Handler(SimpleHTTPRequestHandler):
         p = self._path()
         _, s = self._session()
         if p == "/api/me":
-            return self._json(200, {"user": s and s["user"], "setup": not users()})
+            return self._json(200, {"user": s and s["user"], "role": s and s["role"], "setup": not users()})
         if p not in PUBLIC and not s:
             return self._json(401, {"error": "login"}) if p.startswith("/api/") else self._redirect("/login")
         if p in ("/login", "/login.html") and s:
             return self._redirect("/")
         if p == "/api/data":
-            return self._json(200, {**load_db(), "user": s["user"]})
+            return self._json(200, {**load_db(), "user": s["user"], "role": s["role"]})
         if p == "/api/export":
             return self._export()
+        if p == "/api/history" and s["role"] != "admin":
+            return self._json(403, {"error": VIEW_ONLY})
         if p == "/api/history":
             period = parse_qs(urlparse(self.path).query).get("period", [""])[0]
             if not re.match(r"^\d{4}-\d{2}$", period):
@@ -411,12 +416,15 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(400, {"error": err})
             with lock:
                 a = read_json(AUTH, {"users": {}})
-                a["users"][s["user"]] = hash_pw(new)
+                a["users"][s["user"]] = {**a["users"].get(s["user"], {}), **hash_pw(new)}  # เก็บสิทธิ์ (role) เดิมไว้
                 write_json(AUTH, a)
                 for t in [t for t, v in sessions.items() if v["user"] == s["user"] and t != tok]:
                     sessions.pop(t)  # เครื่องอื่นต้องล็อกอินใหม่
                 save_sessions()
             return self._json(200, {"ok": True})
+
+        if p in ("/api/changes", "/api/data") and s["role"] != "admin":  # viewer: ห้ามเพิ่ม/แก้/ลบ
+            return self._json(403, {"error": VIEW_ONLY})
 
         if p == "/api/changes":
             return self._apply_changes(body, s["user"])
@@ -442,7 +450,27 @@ class Handler(SimpleHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
+def add_user_cli():
+    """python3 serve.py --user → สร้าง/เปลี่ยนรหัส/เปลี่ยนสิทธิ์ผู้ใช้ (admin / viewer)"""
+    import getpass
+    user = input("ชื่อผู้ใช้: ").strip()
+    pw = getpass.getpass("รหัสผ่าน (อย่างน้อย 8 ตัว): ")
+    if getpass.getpass("ยืนยันรหัสผ่าน: ") != pw:
+        sys.exit("รหัสผ่านทั้งสองช่องไม่ตรงกัน")
+    err = valid_new(user, pw)
+    if err:
+        sys.exit(err)
+    role = "viewer" if input("สิทธิ์ [1] admin ทำได้ทุกอย่าง  [2] viewer ดูอย่างเดียว (Enter = 1): ").strip() in ("2", "viewer") else "admin"
+    a = read_json(AUTH, {"users": {}})
+    a["users"][user] = {**hash_pw(pw), "role": role}
+    write_json(AUTH, a)
+    print(f"✓ บันทึกผู้ใช้ \"{user}\" สิทธิ์ {role} แล้ว (ถ้าเซิร์ฟเวอร์รันอยู่ ให้รีสตาร์ท)")
+
+
 if __name__ == "__main__":
+    if "--user" in sys.argv:
+        add_user_cli()
+        sys.exit(0)
     host = os.environ.get("BRP_HOST", "127.0.0.1")
     port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("BRP_PORT", 8787))
     os.makedirs(STORE, exist_ok=True)
