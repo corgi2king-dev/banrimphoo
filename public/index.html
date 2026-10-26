@@ -7,14 +7,14 @@
 <style>
 :root{
   --bg:#f6f4ef; --panel:#fff; --ink:#1f2a24; --muted:#6b756f; --line:#e3e0d8;
-  --accent:#2f6b4f; --accent-soft:#e3efe8; --warn:#b26a00; --warn-soft:#fbefdc; --dep:#f2c230; --dep-soft:#fff5c7; --dep-ink:#7a5c00;
+  --accent:#2f6b4f; --accent-soft:#e3efe8; --on-accent:#fff; --warn:#b26a00; --warn-soft:#fbefdc; --dep:#f2c230; --dep-soft:#fff5c7; --dep-ink:#7a5c00;
   --danger:#b3261e; --danger-soft:#fbe3e1; --today:#fff7d6; --other:#faf9f6;
   --c1:#2f6b4f; --c2:#4f8fc0; --c3:#d08a3b; --c4:#9a5fb5; --c5:#8d6a46; --c6:#3f9a92; --c7:#5b67c2; --c8:#7f8a2a;
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#141816; --panel:#1d2320; --ink:#e6ebe8; --muted:#97a39c; --line:#2f3733;
-    --accent:#6cc39a; --accent-soft:#22362c; --warn:#e6a54a; --warn-soft:#3a2e1c; --dep:#f5d05a; --dep-soft:#3a3315; --dep-ink:#f5d05a;
+    --accent:#6cc39a; --accent-soft:#22362c; --on-accent:#0f2a1c; --warn:#e6a54a; --warn-soft:#3a2e1c; --dep:#f5d05a; --dep-soft:#3a3315; --dep-ink:#f5d05a;
     --danger:#ef7a72; --danger-soft:#3d2321; --today:#33301f; --other:#191e1b;
     --c1:#6cc39a; --c2:#7ab3e0; --c3:#e6a65c; --c4:#bf8fd6; --c5:#c49a6c; --c6:#6fc4bb; --c7:#8f99e6; --c8:#b6c25a;
   }
@@ -65,6 +65,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tag.due{background:var(--danger-soft);color:var(--danger)}
 .tag.dep{background:var(--dep-soft);color:var(--dep-ink)}
 .chip.dep{color:#3d2f00}
+.chip.paid{color:var(--on-accent)}
 select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center}
@@ -411,7 +412,8 @@ let calY = today.getFullYear(), calM = today.getMonth();
 const received = e => e.paid ? (+e.amount || 0) : Math.min(+e.deposit || 0, +e.amount || 0);
 const remaining = e => (+e.amount || 0) - received(e);
 const payState = e => e.paid ? 'ok' : (+e.deposit > 0 ? 'dep' : 'due');
-const payColor = e => ({ ok: roomColor(e.roomId), dep: 'var(--dep)', due: 'var(--danger)' })[payState(e)];
+// สีแถบในปฏิทิน: ชำระแล้ว = เขียว · มัดจำ = เหลือง · ค้างชำระ = แดง
+const payColor = e => ({ ok: 'var(--accent)', dep: 'var(--dep)', due: 'var(--danger)' })[payState(e)];
 // dropdown เลือกสถานะ (หน้าตาเป็นป้ายสีตามสถานะ)
 const paySelect = (state, attrs, depTxt) => `<select class="tag ${state} pay" ${attrs} title="เปลี่ยนสถานะการชำระเงิน">
   <option value="ok"${state === 'ok' ? ' selected' : ''}>ชำระแล้ว ✓</option>
@@ -772,7 +774,7 @@ function renderCal() {
     if (inMonth) monthSum += sum;
     const chips = list.slice(0, 4).map(e => {
       const r = roomById(e.roomId);
-      return `<div class="chip ${payState(e) === 'dep' ? 'dep' : e.paid ? '' : 'pend'}" style="background:${payColor(e)}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
+      return `<div class="chip ${payState(e) === 'dep' ? 'dep' : e.paid ? 'paid' : 'pend'}" style="background:${payColor(e)}" title="${esc((r?.name || '?') + ' ' + (e.guest || ''))}">${esc(r?.name || '?')}${e.guest ? ' · ' + esc(e.guest) : ''}</div>`;
     }).join('') + (list.length > 4 ? `<div style="font-size:11px;color:var(--muted)">+${list.length - 4} รายการ</div>` : '');
     // ห้องว่าง / ทั้งหมด ของวันนั้น
     const free = openIds.size - new Set(list.map(e => e.roomId).filter(id => openIds.has(id))).size;
@@ -783,8 +785,7 @@ function renderCal() {
   $('#cal').innerHTML = html;
   $('#calMonthSum').textContent = 'รวมเดือนนี้ ' + baht(monthSum);
   $$('#cal .d').forEach(c => c.onclick = () => openDay(c.dataset.date));
-  $('#calLegend').innerHTML = db.rooms.map(r => `<span><span class="dot" style="background:${roomColor(r.id)}"></span>${esc(r.name)}</span>`).join('')
-    + (db.rooms.length ? '<span><span class="avail" style="font-size:11.5px;font-weight:700;padding:0 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)">2/8</span> = ห้องว่าง/ทั้งหมด</span><span><span class="dot" style="background:var(--dep)"></span>แถบเหลือง = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
+  $('#calLegend').innerHTML = (db.rooms.length ? '<span><span class="dot" style="background:var(--accent)"></span>แถบเขียว = ชำระแล้ว</span><span><span class="avail" style="font-size:11.5px;font-weight:700;padding:0 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)">2/8</span> = ห้องว่าง/ทั้งหมด</span><span><span class="dot" style="background:var(--dep)"></span>แถบเหลือง = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
 }
 $('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } renderCal(); };
 $('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } renderCal(); };
