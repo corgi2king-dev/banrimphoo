@@ -644,9 +644,9 @@ function renderToday() {
   dueEs.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (roomPos.get(a.roomId) ?? 99) - (roomPos.get(b.roomId) ?? 99));
 
   $('#tdKpis').innerHTML = [
-    // กล่องแรก = รายได้ · กล่องที่สอง = เข้าพักคืนนี้ (+ เช็คอินใหม่กี่ห้อง)
+    // กล่องแรก = รายได้ · กล่องที่สอง = เข้าพักคืนนี้ (+ เลขห้องที่พัก)
     [isToday ? 'รายได้คืนนี้' : 'รายได้คืนนั้น', baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0)), `จาก ${busy.size} ห้อง`],
-    [isToday ? 'เข้าพักคืนนี้' : 'เข้าพักคืนนั้น', `${busy.size} ห้อง`, `เช็คอินใหม่ ${ins.length} ห้อง`],
+    [isToday ? 'เข้าพักคืนนี้' : 'เข้าพักคืนนั้น', `${busy.size} ห้อง`, busy.size ? `ห้อง ${db.rooms.filter(r => busy.has(r.id)).map(r => r.name).join(', ')}` : '-'],
     ['ห้องว่าง', `${free.length} ห้อง`, free.length ? free.map(r => r.name).join(', ') : 'เต็มทุกห้อง'],
     ['ค้างชำระทั้งหมด', `<span style="color:${dueSum ? 'var(--danger)' : 'inherit'}">${baht(dueSum)}</span>`, `${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน`],  // ห้องที่มียอดค้าง · คืนที่ยังไม่จ่ายครบ
   ].filter(Boolean).map(([l, v, sub]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${esc(sub)}</div></div>`).join('');
