@@ -85,15 +85,15 @@ def build(rooms, entries, title, expenses=()):
         return f"มัดจำ {got(e):,.0f} · ค้าง {amt(e) - got(e):,.0f}" if got(e) else "ค้างชำระ"
 
     # ชีต 1: รายการ
-    head = ["วันที่", "ห้อง", "ประเภท", "ผู้เข้าพัก", "ค่าเช่า (บาท)", "สถานะ", "ช่องทาง", "หมายเหตุ"]
+    head = ["วันที่", "ห้อง", "ประเภท", "ผู้เข้าพัก", "เบอร์โทร", "ค่าเช่า (บาท)", "สถานะ", "ช่องทาง", "หมายเหตุ"]
     rows1 = [[(title, TITLE)], [], [(h, HEAD) for h in head]]
     for e in es:
         r = room.get(e.get("roomId"), {})
         rows1.append([(_serial(e["date"]), DATE), (r.get("name", "?"), DUE), (r.get("type", ""), TEXT),
-                      (e.get("guest", ""), TEXT), (amt(e), NUM), (status(e), TEXT),
+                      (e.get("guest", ""), TEXT), (e.get("phone", ""), TEXT), (amt(e), NUM), (status(e), TEXT),
                       (e.get("channel", ""), TEXT), (e.get("note", ""), TEXT)])
     total = sum(amt(e) for e in es)
-    rows1.append([(f"รวม {len(es)} รายการ", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT),
+    rows1.append([(f"รวม {len(es)} รายการ", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT),
                   (total, TOTAL_NUM), ("", TOTAL_TXT), ("", TOTAL_TXT), ("", TOTAL_TXT)])
 
     # ชีต 2: สรุปตามห้อง
@@ -123,7 +123,7 @@ def build(rooms, entries, title, expenses=()):
               [("ค่าใช้จ่าย", TEXT), ("", TEXT), (ex_total, NUM)],
               [("กำไรสุทธิ", TOTAL_TXT), ("", TOTAL_TXT), (total - ex_total, TOTAL_NUM)]]
 
-    sheets = [("รายการเช่า", _sheet(rows1, [16, 10, 16, 22, 14, 22, 12, 30], 3)),
+    sheets = [("รายการเช่า", _sheet(rows1, [16, 10, 16, 22, 15, 14, 22, 12, 30], 3)),
               ("สรุปตามห้อง", _sheet(rows2, [12, 16, 12, 15, 18, 16], 3)),
               ("ค่าใช้จ่าย", _sheet(rows3, [16, 18, 16, 12, 34], 3))]
 

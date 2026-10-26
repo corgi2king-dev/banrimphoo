@@ -12,7 +12,7 @@ import sys
 COLS = {
     "rooms": [("name", "name", "text"), ("type", "type", "text"), ("price", "price", "num"), ("capacity", "capacity", "int"),
               ("status", "status", "text"), ("note", "note", "text")],
-    "entries": [("date", "date", "text"), ("roomId", "room_id", "text"), ("guest", "guest", "text"), ("amount", "amount", "num"),
+    "entries": [("date", "date", "text"), ("roomId", "room_id", "text"), ("guest", "guest", "text"), ("phone", "phone", "text"), ("amount", "amount", "num"),
                 ("paid", "paid", "bool"), ("deposit", "deposit", "num"), ("channel", "channel", "text"), ("note", "note", "text"),
                 ("group", "grp", "text")],
     "expenses": [("date", "date", "text"), ("cat", "cat", "text"), ("amount", "amount", "num"), ("channel", "channel", "text"),

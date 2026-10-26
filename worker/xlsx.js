@@ -49,14 +49,14 @@ export function buildXlsx(rooms, entries, title, expenses = []) {
   const status = e => e.paid ? 'ชำระแล้ว' : got(e) ? `มัดจำ ${fmt(got(e))} · ค้าง ${fmt(amt(e) - got(e))}` : 'ค้างชำระ';
   const blank = n => Array.from({ length: n }, () => ['', TOTAL_TXT]);
 
-  const rows1 = [[[title, TITLE]], [], ['วันที่', 'ห้อง', 'ประเภท', 'ผู้เข้าพัก', 'ค่าเช่า (บาท)', 'สถานะ', 'ช่องทาง', 'หมายเหตุ'].map(h => [h, HEAD])];
+  const rows1 = [[[title, TITLE]], [], ['วันที่', 'ห้อง', 'ประเภท', 'ผู้เข้าพัก', 'เบอร์โทร', 'ค่าเช่า (บาท)', 'สถานะ', 'ช่องทาง', 'หมายเหตุ'].map(h => [h, HEAD])];
   es.forEach(e => {
     const r = room[e.roomId] || {};
-    rows1.push([[serial(e.date), DATE], [r.name ?? '?', LEFT], [r.type || '', TEXT], [e.guest || '', TEXT],
+    rows1.push([[serial(e.date), DATE], [r.name ?? '?', LEFT], [r.type || '', TEXT], [e.guest || '', TEXT], [e.phone || '', TEXT],
       [amt(e), NUM], [status(e), TEXT], [e.channel || '', TEXT], [e.note || '', TEXT]]);
   });
   const total = es.reduce((a, e) => a + amt(e), 0);
-  rows1.push([[`รวม ${es.length} รายการ`, TOTAL_TXT], ...blank(3), [total, TOTAL_NUM], ...blank(3)]);
+  rows1.push([[`รวม ${es.length} รายการ`, TOTAL_TXT], ...blank(4), [total, TOTAL_NUM], ...blank(3)]);
 
   const rows2 = [[[title, TITLE]], [], ['ห้อง', 'ประเภท', 'จำนวนคืน', 'รายได้ (บาท)', 'รับเงินแล้ว (บาท)', 'ค้างชำระ (บาท)'].map(h => [h, HEAD])];
   let sums = [0, 0, 0, 0];
@@ -79,7 +79,7 @@ export function buildXlsx(rooms, entries, title, expenses = []) {
     [['ค่าใช้จ่าย', TEXT], ['', TEXT], [exTotal, NUM]],
     [['กำไรสุทธิ', TOTAL_TXT], ['', TOTAL_TXT], [total - exTotal, TOTAL_NUM]]);
 
-  const sheets = [['รายการเช่า', sheet(rows1, [16, 10, 16, 22, 14, 22, 12, 30], 3)],
+  const sheets = [['รายการเช่า', sheet(rows1, [16, 10, 16, 22, 15, 14, 22, 12, 30], 3)],
     ['สรุปตามห้อง', sheet(rows2, [12, 16, 12, 15, 18, 16], 3)],
     ['ค่าใช้จ่าย', sheet(rows3, [16, 18, 16, 12, 34], 3)]];
   const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';

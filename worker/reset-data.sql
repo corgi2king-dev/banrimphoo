@@ -3,3 +3,4 @@
 DROP TABLE IF EXISTS entries;
 DROP TABLE IF EXISTS expenses;
 DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS d1_migrations;  -- ให้ migrations รันใหม่หลังสร้างตารางใหม่

@@ -1,4 +1,5 @@
 -- บ้านริมภู · ตารางใน Cloudflare D1 (แยกคอลัมน์ · extra = JSON สำหรับช่องข้อมูลที่อาจเพิ่มในอนาคต)
+-- นี่คือโครงตั้งต้น — การเปลี่ยนตารางหลังจากนี้อยู่ใน migrations/ (wrangler d1 migrations apply)
 
 CREATE TABLE IF NOT EXISTS rooms (
   id       TEXT PRIMARY KEY,
