@@ -661,6 +661,10 @@ function renderToday() {
     [isToday ? 'รายได้คืนนี้' : 'รายได้คืนนั้น', baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0)), `จาก ${busy.size} ห้อง`],
     [isToday ? 'เข้าพักคืนนี้' : 'เข้าพักคืนนั้น', `${busy.size} ห้อง`, busy.size ? `ห้อง ${db.rooms.filter(r => busy.has(r.id)).map(r => r.name).join(', ')}` : '-'],
     ['ห้องว่าง', `${free.length} ห้อง`, free.length ? free.map(r => r.name).join(', ') : 'เต็มทุกห้อง'],
+    // ค้างชำระเฉพาะคืนนี้ (วันที่ที่ดูอยู่) — ยอดที่เหลือหลังหักมัดจำ
+    (() => { const due = tonight.filter(e => remaining(e) > 0), sum = due.reduce((a, e) => a + remaining(e), 0);
+      return [isToday ? 'ค้างชำระวันนี้' : 'ค้างชำระคืนนั้น', `<span style="color:${sum ? 'var(--danger)' : 'inherit'}">${baht(sum)}</span>`,
+        due.length ? `${new Set(due.map(e => e.roomId)).size} ห้อง` : 'ชำระครบแล้ว']; })(),
     ['ค้างชำระทั้งหมด', `<span style="color:${dueSum ? 'var(--danger)' : 'inherit'}">${baht(dueSum)}</span>`, `${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน`],  // ห้องที่มียอดค้าง · คืนที่ยังไม่จ่ายครบ
   ].filter(Boolean).map(([l, v, sub]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${esc(sub)}</div></div>`).join('');
 
