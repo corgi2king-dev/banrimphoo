@@ -234,7 +234,7 @@ nav button{white-space:nowrap}
     <div class="tday">
       <div class="card"><h3 id="tdInTitle">🛏 เข้าพักคืนนี้</h3><div class="tlist" id="tdIn"></div></div>
     </div>
-    <div class="card" style="margin-top:16px"><h3>💸 ค้างชำระทั้งหมด</h3><div class="tlist" id="tdDue"></div></div>
+    <div class="card" style="margin-top:16px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0">💸 ค้างชำระทั้งหมด</h3><div class="sp"></div><div id="tdDueSum" style="text-align:right"></div></div><div class="tlist" id="tdDue"></div></div>
   </section>
 
   <!-- ห้องพัก -->
@@ -699,15 +699,14 @@ function renderToday() {
   dueEs.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (roomPos.get(a.roomId) ?? 99) - (roomPos.get(b.roomId) ?? 99));
 
   $('#tdKpis').innerHTML = [
-    // กล่องแรก = รายได้ · กล่องที่สอง = เข้าพักคืนนี้ (+ เลขห้องที่พัก)
-    [isToday ? 'รายได้วันนี้' : 'รายได้วันนั้น', baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0)), `จาก ${busy.size} ห้อง`],
+    // ลำดับกล่อง: เข้าพัก · ห้องว่าง · รายได้ · ค้างชำระวันนี้
     [isToday ? 'เข้าพักวันนี้' : 'เข้าพักวันนั้น', `${busy.size} ห้อง`, busy.size ? `ห้อง ${db.rooms.filter(r => busy.has(r.id)).map(r => r.name).join(', ')}` : '-'],
     [isToday ? 'ห้องว่างวันนี้' : 'ห้องว่างวันนั้น', `${free.length} ห้อง`, free.length ? `ห้อง ${free.map(r => r.name).join(', ')}` : 'เต็มทุกห้อง'],
+    [isToday ? 'รายได้วันนี้' : 'รายได้วันนั้น', `<span style="color:var(--accent)">${baht(tonight.reduce((a, e) => a + (+e.amount || 0), 0))}</span>`, `จาก ${busy.size} ห้อง`],
     // ค้างชำระเฉพาะคืนนี้ (วันที่ที่ดูอยู่) — ยอดที่เหลือหลังหักมัดจำ
     (() => { const due = tonight.filter(e => remaining(e) > 0), sum = due.reduce((a, e) => a + remaining(e), 0);
-      return [isToday ? 'ค้างชำระวันนี้' : 'ค้างชำระคืนนั้น', `<span style="color:${sum ? 'var(--danger)' : 'inherit'}">${baht(sum)}</span>`,
+      return [isToday ? 'ค้างชำระวันนี้' : 'ค้างชำระวันนั้น', `<span style="color:var(--danger)">${baht(sum)}</span>`,
         due.length ? `${new Set(due.map(e => e.roomId)).size} ห้อง` : 'ชำระครบแล้ว']; })(),
-    ['ค้างชำระทั้งหมด', `<span style="color:${dueSum ? 'var(--danger)' : 'inherit'}">${baht(dueSum)}</span>`, `${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน`],  // ห้องที่มียอดค้าง · คืนที่ยังไม่จ่ายครบ
   ].filter(Boolean).map(([l, v, sub]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${esc(sub)}</div></div>`).join('');
 
   const item = (e, extra) => {
@@ -730,6 +729,10 @@ function renderToday() {
   $('#tdInTitle').textContent = isToday ? '🛏 เข้าพักคืนนี้' : `🛏 เข้าพักคืน ${shortTh(key)}`;
   $('#tdIn').innerHTML = tonightList.map(e => item(e)).join('') || empty(isToday ? 'ไม่มีผู้เข้าพักคืนนี้' : 'ไม่มีผู้เข้าพักคืนนั้น');
 
+  // สรุปยอดค้างทั้งหมดไว้ที่หัวการ์ด (แทนกล่องตัวเลขด้านบน)
+  $('#tdDueSum').innerHTML = dueEs.length
+    ? `<b style="font-size:18px;color:var(--danger)">${baht(dueSum)}</b><div style="font-size:12.5px;color:var(--muted)">${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน</div>`
+    : '';
   $('#tdDue').innerHTML = dueEs.map(n => `<div class="titem"><span class="dot" style="background:${roomColor(n.roomId)}"></span>
       <div class="who"><b>ห้อง ${esc(roomById(n.roomId)?.name || '?')} · ${esc(n.guest || 'ไม่ระบุชื่อ')}</b>
         <span>${TH_DOW[parseYmd(n.date).getDay()]}. ${shortTh(n.date)}${n.date.slice(0, 4) !== String(today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}${telLink(n.phone)} · ค้าง <b style="display:inline;color:var(--danger)">${baht(remaining(n))}</b>${received(n) ? ` (มัดจำแล้ว ${baht(received(n))})` : ''}</span></div>
@@ -1071,27 +1074,42 @@ function changesOf(kind, b, a) {
   if (kind === 'entries' && payText(b) !== payText(a)) out.push(`สถานะ: <s>${esc(payText(b))}</s> → <ins>${esc(payText(a))}</ins>`);
   return out.join(' · ');
 }
-// แบ่งหน้า: หน้าละ HI_PER แถว · เปลี่ยนเดือน/ตัวกรอง = กลับหน้า 1 · เปลี่ยนหน้าไม่ต้องโหลดใหม่
-const HI_PER = 10;
-let hiRows = [], hiPage = 1;
+// แบ่งหน้า: แสดงหน้าละ HI_PER แถว · ดึงจากเซิร์ฟเวอร์ทีละ HI_BATCH แถว (ดึงเพิ่มเมื่อเลื่อนเกินที่มี)
+// เปลี่ยนเดือน/ตัวกรอง = ล้างแล้วเริ่มหน้า 1 ใหม่ · ตัวกรองทำที่เซิร์ฟเวอร์ (จำนวนรวม/จำนวนหน้าถูกต้อง)
+const HI_PER = 10, HI_BATCH = 50;
+let hiRows = [], hiTotal = 0, hiPage = 1, hiSeq = 0;
+async function fetchHistory(offset) {
+  const kind = $('#hiKind').value, seq = hiSeq;
+  const r = await fetch(`api/history?period=${hiY}-${pad(hiM + 1)}&kind=${kind}&offset=${offset}&limit=${HI_BATCH}`, { cache: 'no-store' });
+  if (r.status === 401) return toLogin();
+  const d = r.ok ? await r.json() : { total: 0, rows: [] };
+  if (seq !== hiSeq) return false;  // เปลี่ยนเดือน/ตัวกรองระหว่างโหลด → ทิ้งผลเก่า
+  hiTotal = d.total; hiRows.push(...d.rows);
+  return true;
+}
 async function renderHistory() {
   $('#hiTitle').textContent = `${TH_MONTHS[hiM]} ${be(hiY)}`;
   $('#hiPager').hidden = true;
   if (mode !== 'server') { $('#hiList').innerHTML = '<div class="empty">ประวัติใช้ได้เมื่อเปิดผ่านเซิร์ฟเวอร์</div>'; return; }
   $('#hiList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
-  const r = await fetch(`api/history?period=${hiY}-${pad(hiM + 1)}`, { cache: 'no-store' });
-  if (r.status === 401) return toLogin();
-  hiRows = r.ok ? await r.json() : [];
-  hiPage = 1;
+  hiSeq++; hiRows = []; hiTotal = 0; hiPage = 1;
+  if (await fetchHistory(0)) renderHistoryPage();
+}
+async function goHistoryPage(n) {
+  hiPage = n;
+  const need = Math.min(hiPage * HI_PER, hiTotal);
+  if (hiRows.length < need) {  // หน้านี้ยังไม่ได้โหลด → ดึงอีก HI_BATCH แถว
+    $('#hiPgNext').disabled = $('#hiPgPrev').disabled = true; $('#hiPgInfo').textContent = 'กำลังโหลด…';
+    if (!await fetchHistory(hiRows.length)) return;
+  }
   renderHistoryPage();
 }
 function renderHistoryPage() {
-  const kind = $('#hiKind').value, all = hiRows.filter(h => !kind || h.kind === kind);
-  const pages = Math.max(1, Math.ceil(all.length / HI_PER));
+  const pages = Math.max(1, Math.ceil(hiTotal / HI_PER));
   hiPage = Math.min(Math.max(1, hiPage), pages);
-  const list = all.slice((hiPage - 1) * HI_PER, hiPage * HI_PER);
-  $('#hiPager').hidden = all.length <= HI_PER;
-  $('#hiPgInfo').textContent = `หน้า ${hiPage} / ${pages} · ${all.length} รายการ`;
+  const list = hiRows.slice((hiPage - 1) * HI_PER, hiPage * HI_PER);
+  $('#hiPager').hidden = hiTotal <= HI_PER;
+  $('#hiPgInfo').textContent = `หน้า ${hiPage} / ${pages} · ${hiTotal} รายการ`;
   $('#hiPgPrev').disabled = hiPage <= 1; $('#hiPgNext').disabled = hiPage >= pages;
   $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
     const d = new Date(h.at * 1000), e = h.after || h.before;
@@ -1102,9 +1120,9 @@ function renderHistoryPage() {
 }
 $('#hiPrev').onclick = () => { if (--hiM < 0) { hiM = 11; hiY--; } renderHistory(); };
 $('#hiNext').onclick = () => { if (++hiM > 11) { hiM = 0; hiY++; } renderHistory(); };
-$('#hiKind').onchange = () => { hiPage = 1; renderHistoryPage(); };
-$('#hiPgPrev').onclick = () => { hiPage--; renderHistoryPage(); };
-$('#hiPgNext').onclick = () => { hiPage++; renderHistoryPage(); };
+$('#hiKind').onchange = renderHistory;  // ตัวกรองทำที่เซิร์ฟเวอร์ → โหลดใหม่
+$('#hiPgPrev').onclick = () => goHistoryPage(hiPage - 1);
+$('#hiPgNext').onclick = () => goHistoryPage(hiPage + 1);
 
 // ---------- summary ----------
 function initSummaryFilters() {
@@ -1158,7 +1176,6 @@ function renderSummary(keep) {
     // คืนที่เข้าพัก / คืนทั้งหมดที่ขายได้ (ห้องที่เปิด × จำนวนวัน)
     ['จำนวนคืนที่เข้าพัก', `${nights.toLocaleString('th-TH')}/${(openRooms * days).toLocaleString('th-TH')} คืน`, `${new Set(sel.map(e => e.guest).filter(Boolean)).size} ผู้เข้าพัก`],
     ['อัตราเข้าพัก', occ.toFixed(1) + '%', `${openRooms} ห้อง × ${days} วัน`],
-    ['เฉลี่ยต่อคืน', baht(nights ? total / nights : 0), 'ADR'],
   ].map(([l, v, s]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
 
   // เลือกเดือน → รายได้รายวัน · ทั้งปี → จำนวนคืนรายเดือน

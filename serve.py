@@ -158,12 +158,16 @@ def log_history(user, db, up, de):
                                 "before": before, "after": after}, ensure_ascii=False) + "\n")
 
 
-def read_history(period):
+def read_history(period, kind="", offset=0, limit=50):
+    """ประวัติของเดือน ใหม่สุดก่อน · โหลดทีละช่วง → {total, rows} (เหมือน worker/index.js)"""
     path = os.path.join(HISTORY, f"{period}.jsonl")
-    if not os.path.exists(path):
-        return []
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()][::-1]  # ใหม่สุดก่อน
+    rows = []
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()][::-1]
+    if kind:
+        rows = [h for h in rows if h.get("kind") == kind]
+    return {"total": len(rows), "rows": rows[offset:offset + limit]}
 
 
 def migrate():
@@ -350,10 +354,18 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/history" and s["role"] != "admin":
             return self._json(403, {"error": VIEW_ONLY})
         if p == "/api/history":
-            period = parse_qs(urlparse(self.path).query).get("period", [""])[0]
+            q = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            period, kind = q.get("period", ""), q.get("kind", "")
             if not re.match(r"^\d{4}-\d{2}$", period):
                 return self._json(400, {"error": "period ต้องเป็น YYYY-MM"})
-            return self._json(200, read_history(period))
+            if kind not in ("", "entries", "expenses"):
+                return self._json(400, {"error": "kind ต้องเป็น entries หรือ expenses"})
+            try:
+                limit = min(100, max(1, int(q.get("limit") or 50)))
+                offset = max(0, int(q.get("offset") or 0))
+            except ValueError:
+                return self._json(400, {"error": "offset / limit ต้องเป็นตัวเลข"})
+            return self._json(200, read_history(period, kind, offset, limit))
         if p in STATIC:
             return self._static(STATIC[p])
         return self._json(404, {"error": "not found"})

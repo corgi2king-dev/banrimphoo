@@ -165,13 +165,24 @@ async function applyChanges(env, ch, user) {
   return null;
 }
 
-// ประวัติของเดือนที่ทำรายการ (เวลาไทย UTC+7) ใหม่สุดก่อน
-async function history(env, period) {
+// ประวัติของเดือนที่ทำรายการ (เวลาไทย UTC+7) ใหม่สุดก่อน · โหลดทีละช่วง: offset / limit (สูงสุด 100) · kind = entries | expenses
+// ตอบ { total, rows } — total = จำนวนทั้งหมดของเดือน (ตามตัวกรอง) ใช้คำนวณจำนวนหน้า
+async function history(env, q) {
+  const period = q.get('period') || '', kind = q.get('kind') || '';
   if (!/^\d{4}-\d{2}$/.test(period)) return json(400, { error: 'period ต้องเป็น YYYY-MM' });
+  if (kind && !LOGGED.includes(kind)) return json(400, { error: 'kind ต้องเป็น entries หรือ expenses' });
+  const limit = Math.min(100, Math.max(1, +q.get('limit') || 50)), offset = Math.max(0, +q.get('offset') || 0);
   const y = +period.slice(0, 4), m = +period.slice(5) - 1, TZ = 7 * 3600;
   const from = Date.UTC(y, m, 1) / 1000 - TZ, to = Date.UTC(y, m + 1, 1) / 1000 - TZ;
-  const r = await env.DB.prepare('SELECT * FROM history WHERE at >= ? AND at < ? ORDER BY at DESC, id DESC LIMIT 2000').bind(from, to).all();
-  return json(200, r.results.map(h => ({ ...h, before: h.before && JSON.parse(h.before), after: h.after && JSON.parse(h.after) })));
+  const where = 'WHERE at >= ? AND at < ?' + (kind ? ' AND kind = ?' : ''), args = kind ? [from, to, kind] : [from, to];
+  const [cnt, rows] = await env.DB.batch([
+    env.DB.prepare(`SELECT count(*) AS n FROM history ${where}`).bind(...args),
+    env.DB.prepare(`SELECT * FROM history ${where} ORDER BY at DESC, id DESC LIMIT ? OFFSET ?`).bind(...args, limit, offset),
+  ]);
+  return json(200, {
+    total: cnt.results[0].n,
+    rows: rows.results.map(h => ({ ...h, before: h.before && JSON.parse(h.before), after: h.after && JSON.parse(h.after) })),
+  });
 }
 
 async function exportXlsx(env, period) {
@@ -229,7 +240,7 @@ async function handle(req, env) {
     if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
     if (p === '/api/data') return json(200, { ...await loadDb(env), user: s.user, role: s.role });  // รวมชื่อผู้ใช้/สิทธิ์มาด้วย ไม่ต้องเรียก /api/me อีกรอบ
     if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
-  if (p === '/api/history') return s.role === 'admin' ? history(env, url.searchParams.get('period') || '') : json(403, { error: VIEW_ONLY });
+  if (p === '/api/history') return s.role === 'admin' ? history(env, url.searchParams) : json(403, { error: VIEW_ONLY });
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });
     const res = await env.ASSETS.fetch(req);
     const out = new Response(res.body, res);
