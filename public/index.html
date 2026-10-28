@@ -171,6 +171,10 @@ svg .grid{stroke:var(--line)}
 .tday{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
 .tday .card{margin:0}
 .tlist{display:flex;flex-direction:column;gap:8px}
+.tmon{display:flex;align-items:baseline;gap:8px;padding:6px 10px;margin-top:6px;border-radius:8px;background:var(--cal-head);color:var(--cal-head-ink);font-weight:600}
+.tmon:first-child{margin-top:0}
+.tmon .sp{flex:1}
+.tmon small{font-weight:400;font-size:12.5px}
 .titem{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .titem .who{flex:1;min-width:0}
 .titem .who b{display:block}
@@ -743,10 +747,16 @@ function renderToday() {
   $('#tdDueSum').innerHTML = dueEs.length
     ? `<b style="font-size:18px;color:var(--danger)">${baht(dueSum)}</b><div style="font-size:12.5px;color:var(--muted)">${new Set(dueEs.map(e => e.roomId)).size} ห้อง · ${dueEs.length} คืน</div>`
     : '';
-  $('#tdDue').innerHTML = dueEs.map(n => `<div class="titem"><span class="dot" style="background:${roomColor(n.roomId)}"></span>
+  // แบ่งกลุ่มตามเดือน: หัวกลุ่ม = ชื่อเดือน + จำนวนคืน + ยอดค้างของเดือนนั้น
+  const dueByMon = new Map();
+  dueEs.forEach(n => { const k = n.date.slice(0, 7); dueByMon.set(k, [...(dueByMon.get(k) || []), n]); });
+  const dueItem = n => `<div class="titem"><span class="dot" style="background:${roomColor(n.roomId)}"></span>
       <div class="who"><b>ห้อง ${esc(roomById(n.roomId)?.name || '?')} · ${esc(n.guest || 'ไม่ระบุชื่อ')}</b>
         <span>${TH_DOW[parseYmd(n.date).getDay()]}. ${shortTh(n.date)}${n.date.slice(0, 4) !== String(today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}${telLink(n.phone)} · ค้าง <b style="display:inline;color:var(--danger)">${baht(remaining(n))}</b>${received(n) ? ` (มัดจำแล้ว ${baht(received(n))})` : ''}</span></div>
-      ${paidTag([n])}</div>`).join('') || empty('ไม่มีค้างชำระ 🎉');
+      ${paidTag([n])}</div>`;
+  $('#tdDue').innerHTML = [...dueByMon].map(([k, list]) => `<div class="tmon">📅 ${TH_MONTHS[+k.slice(5) - 1]} ${be(+k.slice(0, 4))}<div class="sp"></div>
+      <small>${new Set(list.map(n => n.roomId)).size} ห้อง · ${list.length} คืน · </small><span style="color:var(--danger)">${baht(list.reduce((a, n) => a + remaining(n), 0))}</span></div>`
+    + list.map(dueItem).join('')).join('') || empty('ไม่มีค้างชำระ 🎉');
 
   $$('[data-tdpay]').forEach(sel => sel.onchange = async () => {
     const ids = sel.dataset.tdpay.split(','), nights = db.entries.filter(x => ids.includes(x.id));
