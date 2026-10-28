@@ -51,10 +51,10 @@ EMPTY = {"rooms": [], "entries": []}
 TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
              "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
 STATIC = {"/": "index.html", "/index.html": "index.html", "/login": "login.html", "/login.html": "login.html",
-          "/scene.js": "scene.js", "/photo.jpg": "photo.jpg"}
-TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".jpg": "image/jpeg"}
+          "/scene.js": "scene.js", "/photo.jpg": "photo.jpg", "/favicon.svg": "favicon.svg"}
+TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".jpg": "image/jpeg", ".svg": "image/svg+xml"}
 # photo.jpg = รูปจริงของที่พัก (ไม่บังคับ) ถ้ามีจะใช้เป็นพื้นหลังหน้าล็อกอินแทนภาพวาด
-PUBLIC = {"/login", "/login.html", "/scene.js", "/photo.jpg", "/api/me", "/api/login", "/api/setup"}
+PUBLIC = {"/login", "/login.html", "/scene.js", "/photo.jpg", "/favicon.svg", "/api/me", "/api/login", "/api/setup"}
 COOKIE = "brp_session"
 VIEW_ONLY = "บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้"
 SESSION_TTL = 7 * 24 * 3600
