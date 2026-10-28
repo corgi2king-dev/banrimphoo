@@ -119,6 +119,7 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .kpi .s{font-size:12px;color:var(--muted)}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
 .charts .card{margin:0}
+.charts .grp{grid-column:1/-1;margin:10px 0 -4px;font-size:17px}
 .hist{display:flex;flex-direction:column}
 .hrow{display:grid;grid-template-columns:92px 74px 1fr;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:start;font-size:14px}
 .hrow .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -320,9 +321,18 @@ nav button{white-space:nowrap}
         <div style="overflow-x:auto"><table class="mtable"><thead><tr><th>เดือน</th><th class="num">ค่าเช่า</th><th class="num">ค่าใช้จ่าย</th><th class="num">กำไร</th><th class="num hide-sm">% กำไร</th></tr></thead>
         <tbody id="mtBody"></tbody><tfoot id="mtFoot"></tfoot></table></div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px">กดที่เดือนเพื่อดูสรุปของเดือนนั้น</div></div>
-      <div class="card"><h3 id="chDailyTitle">รายได้รายวัน</h3><div id="chDaily"></div></div>
+      <h3 class="grp" id="grpMonth">📅 กราฟรายเดือน</h3>
+      <div class="card" style="grid-column:1/-1"><h3 id="chTrendTitle">รายได้ · ค่าใช้จ่าย · กำไร รายเดือน</h3>
+        <div class="legend" style="justify-content:center;margin-bottom:4px"><span><span class="dot" style="background:var(--accent)"></span>รายได้</span><span><span class="dot" style="background:var(--danger)"></span>ค่าใช้จ่าย</span><span><span class="dot" style="background:var(--c2)"></span>กำไร</span></div>
+        <div id="chTrend"></div></div>
       <div class="card"><h3 id="chMonthlyTitle">รายรับ-รายจ่ายรายเดือน</h3><div id="chMonthly"></div>
         <div class="legend" style="margin-top:6px"><span><span class="dot" style="background:var(--accent)"></span>รายได้</span><span><span class="dot" style="background:var(--danger)"></span>ค่าใช้จ่าย</span></div></div>
+      <div class="card"><h3 id="chNightsMTitle">จำนวนคืนที่เข้าพักรายเดือน</h3><div id="chNightsM"></div></div>
+      <h3 class="grp" id="grpDay">📆 กราฟรายวัน</h3>
+      <div class="card empty" id="dayHint" style="grid-column:1/-1">เลือกเดือนด้านบน หรือกดที่เดือนในตาราง เพื่อดูกราฟรายวัน</div>
+      <div class="card day"><h3 id="chDailyTitle">รายได้รายวัน</h3><div id="chDaily"></div></div>
+      <div class="card day"><h3 id="chDayRoomsTitle">จำนวนคืนที่เข้าพักรายวัน</h3><div id="chDayRooms"></div></div>
+      <h3 class="grp" id="grpCat">🗂 แยกตามห้อง · หมวด · ลูกค้า</h3>
       <div class="card"><h3>รายได้แยกตามห้อง</h3><div id="chRooms"></div></div>
       <div class="card"><h3 id="chExTitle">ค่าใช้จ่ายแยกตามหมวด</h3><div id="chEx"></div></div>
       <div class="card"><h3>สถานะการชำระเงิน</h3><div id="chPaid"></div></div>
@@ -1178,15 +1188,20 @@ function renderSummary(keep) {
     ['อัตราเข้าพัก', occ.toFixed(1) + '%', `${openRooms} ห้อง × ${days} วัน`],
   ].map(([l, v, s]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
 
-  // เลือกเดือน → รายได้รายวัน · ทั้งปี → จำนวนคืนรายเดือน
+  // กลุ่มรายเดือน = ทั้งปีเสมอ · กลุ่มรายวัน = เดือนที่เลือก (ทั้งปี → บอกให้เลือกเดือน) · กลุ่มแยกตามหมวด = ช่วงที่เลือก
+  $('#grpMonth').textContent = `📅 กราฟรายเดือน · ปี ${be(y)}`;
+  $('#grpDay').textContent = m === null ? '📆 กราฟรายวัน' : `📆 กราฟรายวัน · ${period}`;
+  $('#grpCat').textContent = `🗂 แยกตามห้อง · หมวด · ลูกค้า · ${period}`;
+  $('#chNightsMTitle').textContent = `จำนวนคืนที่เข้าพักรายเดือน · ปี ${be(y)}`;
+  $('#chNightsM').innerHTML = barChart(TH_MON, TH_MON.map((_, i) => inYear.filter(e => +e.date.slice(5, 7) - 1 === i).length), i => TH_MONTHS[i], 1, v => v + ' คืน', m);
+  $('#dayHint').hidden = m !== null;
+  $$('#tab-summary .day').forEach(c => c.hidden = m === null);
   if (m !== null) {
+    const perDay = Array.from({ length: days }, (_, i) => sel.filter(e => +e.date.slice(8) === i + 1));
     $('#chDailyTitle').textContent = `รายได้รายวัน · ${period}`;
-    const vals = Array.from({ length: days }, (_, i) => sel.filter(e => +e.date.slice(8) === i + 1).reduce((a, e) => a + (+e.amount || 0), 0));
-    $('#chDaily').innerHTML = barChart(vals.map((_, i) => String(i + 1)), vals, i => `${i + 1} ${TH_MON[m]}`, 5);
-  } else {
-    $('#chDailyTitle').textContent = `จำนวนคืนที่เข้าพักรายเดือน · ${period}`;
-    const vals = TH_MON.map((_, i) => inYear.filter(e => +e.date.slice(5, 7) - 1 === i).length);
-    $('#chDaily').innerHTML = barChart(TH_MON, vals, i => TH_MONTHS[i], 1, v => v + ' คืน');
+    $('#chDaily').innerHTML = barChart(perDay.map((_, i) => String(i + 1)), perDay.map(l => l.reduce((a, e) => a + (+e.amount || 0), 0)), i => `${i + 1} ${TH_MON[m]}`, 5);
+    $('#chDayRoomsTitle').textContent = `จำนวนคืนที่เข้าพักรายวัน · ${period}`;
+    $('#chDayRooms').innerHTML = barChart(perDay.map((_, i) => String(i + 1)), perDay.map(l => l.length), i => `${i + 1} ${TH_MON[m]}`, 5, v => v + ' คืน');
   }
   $('#chMonthlyTitle').textContent = `รายรับ-รายจ่ายรายเดือน · ปี ${be(y)}`;
   const mSum = (list, i) => list.filter(e => +e.date.slice(5, 7) - 1 === i).reduce((a, e) => a + (+e.amount || 0), 0);
@@ -1205,6 +1220,11 @@ function renderSummary(keep) {
   $$('#mtBody tr').forEach(row => row.onclick = () => {
     $('#sumMonth').value = String(+row.dataset.mt === m ? 'all' : row.dataset.mt); renderSummary(true);  // กดเดือนเดิมซ้ำ = ทั้งปี
   });
+  // กราฟเส้น: รายได้ / ค่าใช้จ่าย / กำไร ทั้งปี — ดูว่าเดือนไหนกำไรตกเพราะรายได้ลดหรือค่าใช้จ่ายเพิ่ม
+  const revM = TH_MON.map((_, i) => mSum(inYear, i)), exM_ = TH_MON.map((_, i) => mSum(exYear, i));
+  $('#chTrendTitle').textContent = `รายได้ · ค่าใช้จ่าย · กำไร รายเดือน · ปี ${be(y)}`;
+  $('#chTrend').innerHTML = lineChart(TH_MON, [['รายได้', revM, 'var(--accent)'], ['ค่าใช้จ่าย', exM_, 'var(--danger)'],
+    ['กำไร', revM.map((r, i) => r - exM_[i]), 'var(--c2)']], i => TH_MONTHS[i], m);
   $('#chMonthly').innerHTML = pairChart(TH_MON, TH_MON.map((_, i) => mSum(inYear, i)), TH_MON.map((_, i) => mSum(exYear, i)), i => TH_MONTHS[i], m);
 
   // ค่าใช้จ่ายแยกหมวด
@@ -1297,6 +1317,27 @@ function pairChart(labels, a, b, tip, hi = null) {
       + `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${esc(lb)}</text>`;
   });
   const empty = !a.some(Boolean) && !b.some(Boolean);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">${g}${empty ? `<text x="${(W + L) / 2}" y="${H / 2}" text-anchor="middle">ยังไม่มีข้อมูล</text>` : ''}</svg>`;
+}
+// กราฟเส้นหลายชุด: series = [[ชื่อ, ค่า[], สี]] · ค่าติดลบได้ (กำไรขาดทุน) · hover ทั้งคอลัมน์บอกทุกค่า
+function lineChart(labels, series, tip, hi = null) {
+  const W = 760, H = 260, L = 56, B = 24, T = 12, R = 12, ph = H - B - T, n = labels.length, bw = (W - L - R) / n;
+  const all = series.flatMap(s => s[1]), top = Math.max(0, ...all), bot = Math.min(0, ...all);
+  const step = niceMax((top - bot) / 5) || 1, lo = Math.floor(bot / step) * step, hiV = Math.ceil(top / step) * step || step;
+  const yOf = v => T + ph * (hiV - v) / (hiV - lo), xOf = i => L + bw * (i + 0.5);
+  const sgn = v => (v < 0 ? '−' : '') + baht(Math.abs(v));
+  let g = '';
+  for (let v = lo; v <= hiV + step / 2; v += step)
+    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${yOf(v)}" y2="${yOf(v)}"${v === 0 && lo < 0 ? ' style="stroke:var(--muted)"' : ''}/><text x="${L - 6}" y="${yOf(v) + 4}" text-anchor="end">${v < 0 ? '−' : ''}${short(Math.abs(v))}</text>`;
+  labels.forEach((lb, i) => {
+    g += `<g class="col" data-tip="${esc(tip(i))}|${series.map(([nm, d]) => `${nm} ${sgn(d[i])}`).join('\n')}"><rect class="hit" x="${L + i * bw}" y="${T}" width="${bw}" height="${ph}" fill="transparent"/></g>`
+      + `<text x="${xOf(i)}" y="${H - 6}" text-anchor="middle"${i === hi ? ' style="fill:var(--ink);font-weight:700"' : ''}>${esc(lb)}</text>`;
+  });
+  series.forEach(([, d, col]) => {
+    g += `<polyline points="${d.map((v, i) => `${xOf(i)},${yOf(v)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"/>`
+      + d.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="${i === hi ? 5 : 3}" fill="${col}" stroke="var(--panel)" stroke-width="1.5" pointer-events="none"/>`).join('');
+  });
+  const empty = !all.some(Boolean);
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">${g}${empty ? `<text x="${(W + L) / 2}" y="${H / 2}" text-anchor="middle">ยังไม่มีข้อมูล</text>` : ''}</svg>`;
 }
 function niceMax(v) {
