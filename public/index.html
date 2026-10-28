@@ -587,7 +587,7 @@ $('#pwForm').onsubmit = async e => {
   if (!r.ok) return $('#pwErr').textContent = j.error;
   $('#pwMask').classList.remove('on'); toast('เปลี่ยนรหัสผ่านแล้ว');
 };
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 3000); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2600); }
 
 const roomById = id => db.rooms.find(r => r.id === id);
 const roomColor = id => {
