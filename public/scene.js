@@ -36,7 +36,6 @@
   .scn .bird{animation:brpFly 38s linear infinite}
   .scn .bird .w{transform-box:fill-box;transform-origin:50% 100%;animation:brpFlap .5s ease-in-out infinite alternate}
   .scn .smoke{animation:brpSmoke 5s ease-out infinite;opacity:0}
-  .scn .bob{animation:brpBob 2.6s ease-in-out infinite}
   .scn .nod{animation:brpNod 5s ease-in-out infinite}
   .scn .bubble{animation:brpBubble 9s ease-in-out infinite}
   @media (prefers-color-scheme: dark){.scn .ppl,.scn .dog{filter:brightness(.85)}}
@@ -50,7 +49,6 @@
   @keyframes brpLamp{50%{opacity:calc(var(--lamp) * .55)}}
   @keyframes brpWin{0%{opacity:1}70%{opacity:.35}85%{opacity:1}}
   @keyframes brpFly{from{transform:translate(-120px,0)}50%{transform:translate(800px,-30px)}to{transform:translate(1700px,10px)}}
-  @keyframes brpBob{50%{transform:translateY(-1.5px)}}
   @keyframes brpNod{0%,55%,100%{transform:none}68%,82%{transform:translateY(1.8px)}}
   @keyframes brpBubble{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(-3px)}}
   @keyframes brpFlap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
@@ -181,7 +179,7 @@
     ${welcome ? `<g class="bubble"><path d="M281 -134h76a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-34l-6 7-2-7h-34a8 8 0 0 1-8-8v-14a8 8 0 0 1 8-8Z" fill="#fff" stroke="#d5d9db"/>
       <text x="319" y="-115" text-anchor="middle" font-size="12" font-weight="700" fill="#2f6b4f" font-family="-apple-system,'Noto Sans Thai',sans-serif">ยินดีต้อนรับ</text></g>` : ''}`;
 
-  // คอร์กี้วิ่งเล่นซ้าย-ขวาบนลานหน้าบ้าน (วาดตามรูปตัวอย่างของเจ้าของ): ตัวทรงก้อนขนมปัง หลังแบน ก้นกลม ขาสั้น
+  // คอร์กี้วิ่งเล่นซ้าย-ขวาบนลานหน้าบ้าน (วาดตามรูปตัวอย่างของเจ้าของ): ตัวทรงก้อนขนมปัง หลังแบน ก้นกลม หางกุด ขาสั้น
   // หัวหันมองกล้อง · ขาไม่มีเส้นขอบช่วงบน มีเส้นเฉพาะรอบอุ้งเท้า · ปลายลานหยุดแป๊บแล้วหันกลับ
   // วาดหันขวาตามรูปตัวอย่าง (หน่วยของรูป 134×99, พื้น y≈78) แล้วกลับด้านให้หันซ้าย
   let dogN = 0;
@@ -200,7 +198,7 @@
       <path d="M106 145C104 156 120 156 118 145Z" fill="#ef8a8f" stroke-width="2"/>
       <path d="M87 137C96 149 104 148 112 142C120 148 128 149 137 137" fill="none" stroke="#1d1410" stroke-width="2.4"/>
       <ellipse cx="112" cy="163" rx="17" ry="4.5" fill="#e3d6c3" stroke="none"/>`;
-    const body = 'M58 37L30 37C17 37 9 46 9 58C9 68 13 74 21 76L74 76C83 68 85 48 79 34C75 26 64 26 58 37Z';
+    const body = 'M58 36.6L32 36.6C17 36.6 9.5 46.5 9.5 58.5C9.5 67.5 14 73.5 24 75.6C40 77.8 58 77.6 70.5 75.5C82 70 85 48 79 34C75 26 64 26 58 36.6Z';
     const paw = (w, h) => `C${-w} ${h + w} ${w} ${h + w} ${w} ${h}`;
     const leg = (x, cls, top, ft = W, w = 4.6, h = 10) => `<g transform="translate(${x} 66)"><g class="${cls}">
       <path d="M${-w} -4L${-w} ${h}${paw(w, h)}L${w} -4Z" fill="${top}" stroke="none"/><path d="M${-w} ${h - 2}L${-w} ${h}${paw(w, h)}L${w} ${h - 2}Z" fill="${ft}" stroke="none"/>
@@ -216,6 +214,11 @@
           <path d="M9 56C12 66 18 72 28 74L24 78L8 78Z" fill="${W}"/>
           <path d="M90 26L90 80L62 80L66 74L61 70L65 64L60 59L64 53L58 47L62 40L60 32L66 26Z" fill="${W}"/></g>
         <path d="${body}" fill="none"/>
+        <path d="M27 40L24.5 37.6C17 35.4 10.6 38 8.4 43.2C7.4 46 7.9 48.6 9.7 50.2L14 46Z" fill="${F}" stroke="none"/>
+        <path d="M8.4 45C7.9 47 8.4 48.8 9.7 50.2L10.8 47.4Z" fill="${W}" stroke="none"/>
+        <path d="M24.5 37.6C17 35.4 10.6 38 8.4 43.2C7.4 46 7.9 48.6 9.7 50.2" fill="none"/>
+        <path d="M14 43L10.4 45.6L11.6 46.4L8.6 49.4L10.6 49.6L8.8 53L13 51Z" fill="${F}" stroke="none"/>
+        <path d="M10.4 45.6L11.6 46.4L8.6 49.4L10.6 49.6L8.8 53L10.8 53.2" fill="none"/>
         <g transform="translate(33 -4) scale(.36)" stroke-width="2.6">${head}</g>
       </g>
       ${leg(66, 'sl', W)}${leg(17, 'sl o', F)}</g></g></g>`;
