@@ -12,8 +12,8 @@ const ITER = 100_000; // เพดาน PBKDF2 ของ Workers
 const PUBLIC = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/api/me', '/api/login']);
 // ไม่ต้องเช็ก session (ไม่แตะ D1) — หน้าล็อกอินเช็กเองผ่าน /api/me แล้ว redirect ฝั่งเบราว์เซอร์
 const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/api/login']);
-// cache: ไฟล์ภาพ/สคริปต์ที่ไม่ใช่ข้อมูล → เก็บไว้ 1 วัน · หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag)
-const CACHE = { '/scene.js': 'public, max-age=86400', '/photo.jpg': 'public, max-age=86400' };
+// cache: รูป → เก็บไว้ 1 วัน · scene.js / หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag) — แก้ scene.js แล้วเห็นผลทันทีหลัง deploy
+const CACHE = { '/scene.js': 'public, no-cache', '/photo.jpg': 'public, max-age=86400' };
 const KINDS = ['rooms', 'entries', 'expenses'];
 const VIEW_ONLY = 'บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

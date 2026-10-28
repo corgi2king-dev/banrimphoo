@@ -21,6 +21,11 @@
   .scn svg{display:block;width:100%;height:100%}
   .scn .cloud{animation:brpDrift 70s linear infinite}
   .scn .cloud.c2{animation-duration:100s;animation-delay:-45s}
+  .scn .cloud.c3{animation-duration:130s;animation-delay:-95s}
+  .scn .cloud.c4{animation-duration:85s;animation-delay:-20s}
+  .scn .puff{animation:brpPuff 7s ease-in-out infinite alternate}
+  .scn .mfar{animation:brpPar 26s ease-in-out -9s infinite alternate}
+  .scn .mmid{--px:12px;animation:brpPar 20s ease-in-out -6s infinite alternate}
   .scn .stars{opacity:var(--star)}
   .scn .stars .tw{animation:brpTwinkle 3s ease-in-out infinite}
   .scn .sunglow{animation:brpPulse 6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
@@ -34,9 +39,11 @@
   .scn .bob{animation:brpBob 2.6s ease-in-out infinite}
   .scn .nod{animation:brpNod 5s ease-in-out infinite}
   .scn .bubble{animation:brpBubble 9s ease-in-out infinite}
-  @media (prefers-color-scheme: dark){.scn .ppl{filter:brightness(.85)}}
+  @media (prefers-color-scheme: dark){.scn .ppl,.scn .dog{filter:brightness(.85)}}
   @keyframes brpDrift{from{transform:translateX(-300px)}to{transform:translateX(1700px)}}
   @keyframes brpTwinkle{50%{opacity:.15}}
+  @keyframes brpPuff{from{transform:translateY(-3px)}to{transform:translateY(3px)}}
+  @keyframes brpPar{from{transform:translateX(calc(var(--px,6px) * -1))}to{transform:translateX(var(--px,6px))}}
   @keyframes brpPulse{50%{transform:scale(1.08);opacity:calc(var(--glow) * 1.3)}}
   @keyframes brpMist{from{transform:translateX(-50px)}to{transform:translateX(50px)}}
   @keyframes brpSway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
@@ -47,6 +54,19 @@
   @keyframes brpNod{0%,55%,100%{transform:none}68%,82%{transform:translateY(1.8px)}}
   @keyframes brpBubble{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(-3px)}}
   @keyframes brpFlap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
+  .scn .dog{animation:brpDog 18s ease-in-out infinite}
+  .scn .dog .dsd{animation:brpDsd 18s linear infinite}
+  .scn .dog .sb{animation:brpSb .3s ease-in-out infinite}
+  .scn .dog .sl{transform-box:fill-box;transform-origin:50% 0;animation:brpSl .32s ease-in-out infinite}
+  .scn .dog .o{animation-delay:-.16s}
+  .scn .dog .eL{transform-box:fill-box;transform-origin:80% 100%;animation:brpEL .32s ease-in-out infinite}
+  .scn .dog .eR{transform-box:fill-box;transform-origin:20% 100%;animation:brpER .32s ease-in-out infinite}
+  @keyframes brpDog{0%{transform:translateX(665px)}47%,49%{transform:translateX(-30px)}98%,100%{transform:translateX(665px)}}
+  @keyframes brpDsd{0%,47.9%{transform:scaleX(1)}48%,98.9%{transform:scaleX(-1)}99%,100%{transform:scaleX(1)}}
+  @keyframes brpSb{50%{transform:translateY(-2px)}}
+  @keyframes brpSl{0%,100%{transform:rotate(30deg)}50%{transform:rotate(-30deg)}}
+  @keyframes brpEL{50%{transform:rotate(-6deg)}}
+  @keyframes brpER{50%{transform:rotate(6deg)}}
   .scn.paused *{animation-play-state:paused!important}
   @media (prefers-reduced-motion: reduce){.scn *{animation:none!important}}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -161,8 +181,48 @@
     ${welcome ? `<g class="bubble"><path d="M281 -134h76a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-34l-6 7-2-7h-34a8 8 0 0 1-8-8v-14a8 8 0 0 1 8-8Z" fill="#fff" stroke="#d5d9db"/>
       <text x="319" y="-115" text-anchor="middle" font-size="12" font-weight="700" fill="#2f6b4f" font-family="-apple-system,'Noto Sans Thai',sans-serif">ยินดีต้อนรับ</text></g>` : ''}`;
 
+  // คอร์กี้วิ่งเล่นซ้าย-ขวาบนลานหน้าบ้าน (วาดตามรูปตัวอย่างของเจ้าของ): ตัวทรงก้อนขนมปัง หลังแบน ก้นกลม ขาสั้น
+  // หัวหันมองกล้อง · ขาไม่มีเส้นขอบช่วงบน มีเส้นเฉพาะรอบอุ้งเท้า · ปลายลานหยุดแป๊บแล้วหันกลับ
+  // วาดหันขวาตามรูปตัวอย่าง (หน่วยของรูป 134×99, พื้น y≈78) แล้วกลับด้านให้หันซ้าย
+  let dogN = 0;
+  const corgi = () => {
+    const id = 'brpDog' + (++dogN), OL = '#6d4a2c', F = '#ecb46e', W = '#fdf7ea', PK = '#f3c9b5';
+    const headP = 'M95 68L125 68C150 70 166 88 168 108L174 114L168 118L172 132L165 135C160 152 140 165 112 165C84 165 62 152 56 135L50 130L55 122L49 112L56 108C58 88 72 70 95 68Z';
+    const head = `
+      <g class="eL"><path d="M58 104C46 82 40 56 46 40C50 34 58 34 64 38C78 48 90 60 97 70Z" fill="${F}"/><path d="M60 92C52 76 50 58 54 48C64 52 76 62 84 70Z" fill="${PK}" stroke="none"/></g>
+      <g class="eR"><path d="M162 104C174 82 180 56 174 40C170 34 162 34 156 38C142 48 130 60 123 70Z" fill="${F}"/><path d="M160 92C168 76 170 58 166 48C156 52 144 62 136 70Z" fill="${PK}" stroke="none"/></g>
+      <path d="${headP}" fill="${F}" stroke="none"/>
+      <path clip-path="url(#${id}h)" d="M106 60L116 60C117 85 120 95 126 102C140 108 158 115 186 122L186 172L36 172L36 122C64 115 84 108 98 102C104 95 105 85 106 60Z" fill="${W}" stroke="none"/>
+      <path d="M56 128L50 130L55 122L49 112L56 108C58 88 72 70 95 68L125 68C150 70 166 88 168 108L174 114L168 118L172 132L166 134" fill="none"/>
+      <circle cx="92" cy="111" r="6.8" fill="#1d1410" stroke="none"/><circle cx="94" cy="108.6" r="2" fill="#fff" stroke="none"/>
+      <circle cx="132" cy="111" r="6.8" fill="#1d1410" stroke="none"/><circle cx="134" cy="108.6" r="2" fill="#fff" stroke="none"/>
+      <ellipse cx="112" cy="128" rx="10" ry="7.5" fill="#1d1410" stroke="none"/>
+      <path d="M106 145C104 156 120 156 118 145Z" fill="#ef8a8f" stroke-width="2"/>
+      <path d="M87 137C96 149 104 148 112 142C120 148 128 149 137 137" fill="none" stroke="#1d1410" stroke-width="2.4"/>
+      <ellipse cx="112" cy="163" rx="17" ry="4.5" fill="#e3d6c3" stroke="none"/>`;
+    const body = 'M58 37L30 37C17 37 9 46 9 58C9 68 13 74 21 76L74 76C83 68 85 48 79 34C75 26 64 26 58 37Z';
+    const paw = (w, h) => `C${-w} ${h + w} ${w} ${h + w} ${w} ${h}`;
+    const leg = (x, cls, top, ft = W, w = 4.6, h = 10) => `<g transform="translate(${x} 66)"><g class="${cls}">
+      <path d="M${-w} -4L${-w} ${h}${paw(w, h)}L${w} -4Z" fill="${top}" stroke="none"/><path d="M${-w} ${h - 2}L${-w} ${h}${paw(w, h)}L${w} ${h - 2}Z" fill="${ft}" stroke="none"/>
+      <path d="M${-w} ${h - 3}L${-w} ${h}${paw(w, h)}L${w} ${h - 3}" fill="none"/></g></g>`;
+    return `<g class="dog"><defs><clipPath id="${id}h"><path d="${headP}"/></clipPath><clipPath id="${id}b"><path d="${body}"/></clipPath></defs>
+      <g class="dsd"><g transform="scale(-.55 .55) translate(-58 -80)" stroke="${OL}" stroke-width=".95" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="56" cy="77" rx="52" ry="3.6" fill="#000" opacity=".15" stroke="none"/>
+      ${leg(76, 'sl o', '#efe1cc', '#efe1cc')}${leg(25, 'sl', '#d79a55', '#efe1cc')}
+      <g class="sb">
+        <path d="${body}" fill="${F}"/>
+        <g clip-path="url(#${id}b)" stroke="none">
+          <path d="M6 73L14 70L18 73L26 70L32 73L40 71L48 73L56 71L64 73L74 69L80 80L6 80Z" fill="${W}"/>
+          <path d="M9 56C12 66 18 72 28 74L24 78L8 78Z" fill="${W}"/>
+          <path d="M90 26L90 80L62 80L66 74L61 70L65 64L60 59L64 53L58 47L62 40L60 32L66 26Z" fill="${W}"/></g>
+        <path d="${body}" fill="none"/>
+        <g transform="translate(33 -4) scale(.36)" stroke-width="2.6">${head}</g>
+      </g>
+      ${leg(66, 'sl', W)}${leg(17, 'sl o', F)}</g></g></g>`;
+  };
+
   // อาคารทั้งหลัง พิกัดภายใน: พื้น y=0, กว้าง ~ -40..680
-  const building = welcome => {
+  const building = (welcome, dog) => {
     const P = [0, 90, 180, 270, 360, 450, 540];
     let g = '';
     g += `<ellipse cx="320" cy="8" rx="420" ry="22" fill="#000" opacity=".10"/>`;
@@ -202,6 +262,7 @@
     g += [60, 230, 400, 560].map(x => R(x, 6, 16, 5, 'var(--bConcreteDk)')).join('');
     g += bush(-70, 1);
     g += owners(welcome);
+    if (dog) g += `<g transform="translate(0 15)">${corgi()}</g>`;  // โลโก้ไม่มีหมา (ซูมที่อาคารจั่ว)
     return g;
   };
 
@@ -209,8 +270,8 @@
     const x = (i * 157) % 1440, y = (i * 89) % 360, r = i % 3 ? 1.2 : 2;
     return `<circle class="${i % 3 ? '' : 'tw'}" style="animation-delay:${-(i % 7) * .4}s" cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${0.4 + (i % 5) / 8}"/>`;
   }).join('');
-  const cloud = (x, y, s, cls) => `<g class="cloud ${cls}" opacity=".8"><g transform="translate(${x} ${y}) scale(${s})" fill="var(--cloud)">
-    <ellipse cx="0" cy="0" rx="70" ry="22"/><ellipse cx="-30" cy="-14" rx="34" ry="24"/><ellipse cx="22" cy="-20" rx="40" ry="30"/></g></g>`;
+  const cloud = (x, y, s, cls, d = 0) => `<g class="cloud ${cls}" opacity=".8"><g class="puff" style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(${s})" fill="var(--cloud)">
+    <ellipse cx="0" cy="0" rx="70" ry="22"/><ellipse cx="-30" cy="-14" rx="34" ry="24"/><ellipse cx="22" cy="-20" rx="40" ry="30"/></g></g></g>`;
   const birds = y => [[0, 0, 0], [26, 12, -.2], [12, -16, -.35]].map(([dx, dy, d], i) =>
     `<g class="bird" style="animation-delay:${-i * 0.6 - 8}s"><g transform="translate(${dx} ${y + dy})">
       <path class="w" style="animation-delay:${d}s" d="M-9 0Q-4.5 -6 0 0Q4.5 -6 9 0" stroke="#2d3a40" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"/></g></g>`).join('');
@@ -218,7 +279,7 @@
   // ตำแหน่งตัวอาคารต่อโหมด: x0 = ขอบซ้าย, gy = ระดับพื้น, s = สเกล
   const layout = (mode, narrow) => ({
     full: { view: '0 0 1440 900', fit: 'xMidYMax slice', x0: narrow ? 400 : 190, gy: 772, s: 1, sunY: 250, birdY: 210 },
-    banner: { view: '0 380 1440 330', fit: 'xMidYMax slice', x0: 900, gy: 706, s: 0.62, sunY: 470, birdY: 540 },
+    banner: { view: '0 394 1440 330', fit: 'xMidYMax slice', x0: 900, gy: 706, s: 0.62, sunY: 470, birdY: 540 },
     logo: { view: '716 612 156 156', fit: 'xMidYMid slice', x0: 190, gy: 772, s: 1, sunY: 250, birdY: -99 },
   }[mode] || layout('full', narrow));
 
@@ -236,38 +297,42 @@
     <g class="stars">${stars}</g>
     <circle class="sunglow" cx="1090" cy="${L.sunY}" r="160" fill="url(#brpGlow)" opacity="var(--glow)"/>
     <circle cx="1090" cy="${L.sunY}" r="62" fill="var(--sun)"/>
-    ${cloud(200, L.sunY - 70, 1, '')}${cloud(800, L.sunY + 50, 0.7, 'c2')}
+    ${cloud(200, L.sunY - 70, 1, '')}${cloud(800, L.sunY + 50, 0.7, 'c2', -3)}${cloud(500, L.sunY - 10, 0.5, 'c3', -5)}${cloud(1250, L.sunY - 95, 0.85, 'c4', -2)}
     ${birds(L.birdY)}
-    <path d="M0 560L120 470L230 520L380 400L520 500L640 430L780 520L900 380L1040 480L1180 410L1300 480L1440 430V900H0Z" fill="var(--m1)"/>
-    <path d="M0 620L160 520L300 600L460 500L600 590L760 480L920 600L1080 510L1240 590L1440 520V900H0Z" fill="var(--m2)"/>
+    <path class="mfar" d="M-40 590L0 560L120 470L230 520L380 400L520 500L640 430L780 520L900 380L1040 480L1180 410L1300 480L1440 430L1480 450V900H-40Z" fill="var(--m1)"/>
+    <path class="mmid" d="M-40 650L0 620L160 520L300 600L460 500L600 590L760 480L920 600L1080 510L1240 590L1440 520L1480 540V900H-40Z" fill="var(--m2)"/>
     <rect class="mist" x="-80" y="560" width="1600" height="140" fill="url(#brpMist)"/>
     <path d="M0 700L200 610L380 680L560 600L760 690L980 610L1180 680L1440 620V900H0Z" fill="var(--m3)"/>
     <path d="M0 760Q360 690 720 740T1440 730V900H0Z" fill="var(--hill)"/>
     ${pines.map(([x, y, s], i) => pine(x, y, s, i * .9)).join('')}
     <path d="M0 832Q480 792 960 822T1440 812V900H0Z" fill="var(--field)"/>
     <rect x="${bx0}" y="${L.gy - 8 * L.s}" width="${bx1 - bx0}" height="${900 - L.gy}" rx="${40 * L.s}" fill="var(--hill)"/>
-    <g transform="translate(${L.x0} ${L.gy}) scale(${L.s})">${building(mode !== 'banner' && mode !== 'logo')}</g>
+    <g transform="translate(${L.x0} ${L.gy}) scale(${L.s})">${building(mode !== 'banner' && mode !== 'logo', mode !== 'logo')}</g>
   </svg>`;
   };
 
-  // data-motion="วินาที" = ขยับแค่ช่วงแรกแล้วหยุด (ประหยัดเครื่อง โดยเฉพาะมือถือ) · "0" = ภาพนิ่ง · ไม่ใส่ = ขยับตลอด
+  // data-motion="วินาที" = ขยับช่วงสั้น ๆ แล้วหยุด (ประหยัดเครื่อง โดยเฉพาะมือถือ) · "0" = ภาพนิ่ง · ไม่ใส่ = ขยับตลอด
+  // ขยับใหม่อีกรอบทุกครั้งที่เปลี่ยนเมนู (window.sceneReplay) หรือกลับมาที่แท็บ/แอปนี้
   // ทุกภาพหยุดขยับเองเมื่อเลื่อนพ้นจอ หรือสลับไปแอป/แท็บอื่น
   const scenes = [...document.querySelectorAll('[data-scene]')];
   // หยุด/เล่นด้วย class (ใช้ได้ตั้งแต่ก่อน animation เริ่ม)
   const sync = el => el.classList.toggle('paused', !!el._stopped || el._visible === false || document.visibilityState !== 'visible');
+  const arm = el => {
+    const sec = el.dataset.motion;
+    clearTimeout(el._timer);
+    el._stopped = sec !== undefined && +sec <= 0;
+    if (sec !== undefined && +sec > 0) el._timer = setTimeout(() => { el._stopped = true; sync(el); }, +sec * 1000);
+    sync(el);
+  };
   scenes.forEach(el => {
     el.classList.add('scn');
     el.innerHTML = svg(el.dataset.scene || 'full', el.clientWidth < el.clientHeight * 0.8);
-    const sec = el.dataset.motion;
-    if (sec !== undefined) {
-      if (+sec <= 0) el._stopped = true;
-      else setTimeout(() => { el._stopped = true; sync(el); }, +sec * 1000);
-    }
-    sync(el);
+    arm(el);
   });
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(es => es.forEach(e => { e.target._visible = e.isIntersecting; sync(e.target); }));
     scenes.forEach(el => io.observe(el));
   }
-  document.addEventListener('visibilitychange', () => scenes.forEach(sync));
+  document.addEventListener('visibilitychange', () => scenes.forEach(document.visibilityState === 'visible' ? arm : sync));
+  window.sceneReplay = () => scenes.forEach(arm);
 })();

@@ -438,7 +438,7 @@ nav button{white-space:nowrap}
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
 
-<script src="scene.js" defer></script>
+<script src="scene.js?v=4" defer></script>
 <script>
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -616,6 +616,7 @@ function show(tab) {
   if (READONLY && !VIEWER_TABS.includes(tab)) tab = 'today';
   curTab = tab;
   renderHero();
+  window.sceneReplay?.();  // ภาพหัวเว็บขยับใหม่อีกรอบเมื่อเปลี่ยนเมนู
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $$('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);  // จำเมนูไว้ในที่อยู่เว็บ → refresh แล้วอยู่เมนูเดิม
