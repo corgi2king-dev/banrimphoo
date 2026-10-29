@@ -231,11 +231,17 @@ export default {
     return secure(await handle(req, env));
   },
   // งานรายวัน: เก็บประวัติไว้แค่ 1 เดือน (นับย้อนจากเวลาที่รัน)
+  // log เป็น JSON มีชื่อ job → หน้า Observability ของ Cloudflare แยกเป็นช่องให้ กรองด้วย job = history-cleanup
   async scheduled(event, env) {
-    const cut = new Date(event.scheduledTime);
+    const job = 'history-cleanup', cut = new Date(event.scheduledTime);
     cut.setUTCMonth(cut.getUTCMonth() - 1);
-    const r = await env.DB.prepare('DELETE FROM history WHERE at < ?').bind(Math.floor(cut / 1000)).run();
-    console.log(`ลบประวัติก่อน ${cut.toISOString()} จำนวน ${r.meta.changes} รายการ`);
+    try {
+      const r = await env.DB.prepare('DELETE FROM history WHERE at < ?').bind(Math.floor(cut / 1000)).run();
+      console.log(JSON.stringify({ job, ok: true, deleted: r.meta.changes, before: cut.toISOString(), message: `ลบประวัติก่อน ${cut.toISOString()} จำนวน ${r.meta.changes} รายการ` }));
+    } catch (e) {
+      console.error(JSON.stringify({ job, ok: false, error: String(e), message: `ลบประวัติไม่สำเร็จ: ${e}` }));
+      throw e;  // ให้ Cloudflare นับรอบนี้ว่า error
+    }
   },
 };
 
