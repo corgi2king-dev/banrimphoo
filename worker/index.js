@@ -3,6 +3,7 @@
 // สิทธิ์: admin ทำได้ทุกอย่าง · viewer ดูอย่างเดียว (ห้าม /api/changes, /api/history)
 // API เหมือน serve.py: /api/me, /api/login, /api/logout, /api/password, GET /api/data, POST /api/changes, /api/export
 // สร้างผู้ใช้: npm run user (scripts/create-user.mjs) — ไม่มีหน้าตั้งผู้ใช้ครั้งแรกบนเว็บ เพราะเว็บเปิดให้ทุกคนเข้าถึง
+// งานรายวัน (cron ใน wrangler.jsonc): ลบประวัติ (เมนูประวัติ) ที่เก่ากว่า 1 เดือน
 import { buildXlsx } from './xlsx.js';
 import { fromRow, toRow, upsertSql } from './columns.js';
 
@@ -228,6 +229,13 @@ async function changePassword(env, s, body) {
 export default {
   async fetch(req, env) {
     return secure(await handle(req, env));
+  },
+  // งานรายวัน: เก็บประวัติไว้แค่ 1 เดือน (นับย้อนจากเวลาที่รัน)
+  async scheduled(event, env) {
+    const cut = new Date(event.scheduledTime);
+    cut.setUTCMonth(cut.getUTCMonth() - 1);
+    const r = await env.DB.prepare('DELETE FROM history WHERE at < ?').bind(Math.floor(cut / 1000)).run();
+    console.log(`ลบประวัติก่อน ${cut.toISOString()} จำนวน ${r.meta.changes} รายการ`);
   },
 };
 

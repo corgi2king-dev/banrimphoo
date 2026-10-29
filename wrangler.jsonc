@@ -11,5 +11,7 @@
   ],
   // Smart Placement: ให้ Cloudflare ย้าย Worker ไปรันใกล้ฐานข้อมูล ถ้าช่วยให้เร็วขึ้น (คำขอหนึ่งเรียก D1 หลายครั้ง)
   "placement": { "mode": "smart" },
+  // งานรายวัน 00:30 เวลาไทย (17:30 UTC) — ลบประวัติที่เก่ากว่า 1 เดือน (scheduled ใน worker/index.js)
+  "triggers": { "crons": ["30 17 * * *"] },
   "observability": { "enabled": true }
 }

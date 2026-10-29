@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --port 8788 --ip 127.0.0.1",
+    "dev": "wrangler dev --port 8788 --ip 127.0.0.1 --test-scheduled",
     "db:local": "wrangler d1 execute banrimphoo --local --file worker/reset-data.sql && wrangler d1 execute banrimphoo --local --file worker/schema.sql && wrangler d1 migrations apply banrimphoo --local && python3 scripts/to-d1-sql.py > .d1-import.sql && wrangler d1 execute banrimphoo --local --file .d1-import.sql && rm .d1-import.sql",
     "user:local": "node scripts/create-user.mjs --local",
     "db:init": "wrangler d1 execute banrimphoo --remote --file worker/schema.sql && wrangler d1 migrations apply banrimphoo --remote",
