@@ -760,9 +760,9 @@ function renderToday() {
   };
   const empty = t => `<div class="empty" style="padding:12px">${t}</div>`;
   // เลื่อนไปดูวันอื่น → ใช้คำว่า "เช็คอิน" + วันที่ แทน "วันนี้"
-  // ทุกคนที่พักคืนนี้ — เช็คอินใหม่ขึ้นก่อน แล้วตามลำดับห้อง
-  const order = new Map(db.rooms.map((r, i) => [r.id, i])), isNew = e => !nightOf(e, yday);
-  const tonightList = [...tonight].sort((a, b) => isNew(b) - isNew(a) || (order.get(a.roomId) ?? 99) - (order.get(b.roomId) ?? 99));
+  // ทุกคนที่พักคืนนี้ — เรียงตามเลขห้อง (1, 2, … 10 เรียงแบบตัวเลข)
+  const rname = e => roomById(e.roomId)?.name || '';
+  const tonightList = [...tonight].sort((a, b) => rname(a).localeCompare(rname(b), 'th', { numeric: true }));
   $('#tdInTitle').textContent = isToday ? '🛏 เข้าพักคืนนี้' : `🛏 เข้าพักคืน ${shortTh(key)}`;
   $('#tdIn').innerHTML = tonightList.map(e => item(e)).join('') || empty(isToday ? 'ไม่มีผู้เข้าพักคืนนี้' : 'ไม่มีผู้เข้าพักคืนนั้น');
 
