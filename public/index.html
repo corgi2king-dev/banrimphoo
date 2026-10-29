@@ -180,6 +180,11 @@ svg .grid{stroke:var(--line)}
 .titem .who{flex:1;min-width:0}
 .titem .who b{display:block}
 .titem .who span{font-size:13px;color:var(--muted)}
+/* รูปประเภทห้อง (รายการเข้าพักคืนนี้) */
+.rtype{width:46px;height:46px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:#f1efe8}
+.rtype svg{width:40px;height:40px}
+.rt-single{background:#e6f1fb}.rt-double{background:#fbeaf0}.rt-family{background:#eaf3de}.rt-fan{background:#e1f5ee}.rt-ac{background:#eeedfe}.rt-month{background:#faeeda}
+@media (prefers-color-scheme: dark){.rtype{background:#2c2c2a}.rt-single{background:#0c447c}.rt-double{background:#72243e}.rt-family{background:#27500a}.rt-fan{background:#085041}.rt-ac{background:#3c3489}.rt-month{background:#633806}}
 .stay{display:inline-block;margin-left:6px;padding:0 8px;border-radius:99px;font-size:11.5px;font-weight:700;vertical-align:1px}
 .stay.in{background:var(--accent-soft);color:var(--accent)}
 .stay.cont{background:color-mix(in srgb,var(--c2) 18%,transparent);color:var(--c2)}
@@ -205,6 +210,15 @@ nav button{white-space:nowrap}
 </style>
 </head>
 <body>
+<!-- รูปประเภทห้อง: ใช้ผ่าน <use href="#rt-..."> (roomTypeIcon) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="rt-single" viewBox="0 0 48 48"><rect x="12" y="10" width="24" height="20" rx="3" fill="#9c6233"/><rect x="14" y="12" width="20" height="16" rx="2" fill="#b87a45"/><rect x="10" y="24" width="28" height="12" rx="3" fill="#f4f1ea"/><rect x="15" y="20" width="18" height="7" rx="3.5" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><path d="M10 29h28v6a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z" fill="#3b82c4"/><path d="M10 29h28v2.2H10z" fill="#69a5dc"/><rect x="11" y="38" width="3" height="4" rx="1" fill="#7a4a24"/><rect x="34" y="38" width="3" height="4" rx="1" fill="#7a4a24"/></symbol>
+<symbol id="rt-double" viewBox="0 0 48 48"><rect x="5" y="10" width="38" height="20" rx="3" fill="#9c6233"/><rect x="7" y="12" width="34" height="16" rx="2" fill="#b87a45"/><rect x="3" y="24" width="42" height="12" rx="3" fill="#f4f1ea"/><rect x="7" y="20" width="15" height="7" rx="3.5" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><rect x="26" y="20" width="15" height="7" rx="3.5" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><path d="M3 29h42v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" fill="#d4537e"/><path d="M3 29h42v2.2H3z" fill="#ed93b1"/><rect x="4" y="38" width="3" height="4" rx="1" fill="#7a4a24"/><rect x="41" y="38" width="3" height="4" rx="1" fill="#7a4a24"/></symbol>
+<symbol id="rt-family" viewBox="0 0 48 48"><rect x="3" y="8" width="42" height="22" rx="3" fill="#9c6233"/><rect x="5" y="10" width="38" height="18" rx="2" fill="#b87a45"/><rect x="1" y="24" width="46" height="12" rx="3" fill="#f4f1ea"/><rect x="4" y="19" width="15" height="7" rx="3.5" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><rect x="29" y="19" width="15" height="7" rx="3.5" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><rect x="18.5" y="21" width="11" height="6" rx="3" fill="#fff" stroke="#d9d4c8" stroke-width=".8"/><circle cx="11.5" cy="23" r="4" fill="#f2c9a0"/><path d="M7.5 22.5a4 4 0 0 1 8 0c-1.5-1.6-6.5-1.6-8 0z" fill="#3a2a22"/><circle cx="36.5" cy="23" r="4" fill="#f2c9a0"/><path d="M32.3 23.5a4.2 4.2 0 0 1 8.4 0c0-3-1-4.5-4.2-4.5s-4.2 1.5-4.2 4.5z" fill="#5a3426"/><circle cx="24" cy="25" r="3.1" fill="#f6d2ae"/><path d="M20.9 24.6a3.1 3.1 0 0 1 6.2 0c-1.2-1.2-5-1.2-6.2 0z" fill="#3a2a22"/><path d="M1 27.5h46v7.5a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3z" fill="#639922"/><path d="M1 27.5h46v2.3H1z" fill="#97c459"/><rect x="2" y="38" width="3" height="4" rx="1" fill="#7a4a24"/><rect x="43" y="38" width="3" height="4" rx="1" fill="#7a4a24"/></symbol>
+<symbol id="rt-fan" viewBox="0 0 48 48"><rect x="22.5" y="26" width="3" height="14" fill="#9aa3a8"/><ellipse cx="24" cy="42" rx="9" ry="2.6" fill="#7d878c"/><circle cx="24" cy="18" r="14" fill="#fff" stroke="#9aa3a8" stroke-width="1.6"/><g fill="#1d9e75"><path d="M24 18C21 12 22 6.5 26 7c3 .5 2 6-2 11z"/><path d="M24 18c6.5-.5 11 3 9 6.5-1.5 2.7-6.5.3-9-6.5z"/><path d="M24 18c-3.5 5.5-8.5 7.5-10 4-1.2-2.8 3.5-5.8 10-4z"/></g><circle cx="24" cy="18" r="2.6" fill="#0f6e56"/><path d="M12 18h24M24 6v24" stroke="#c9d0d3" stroke-width=".6"/></symbol>
+<symbol id="rt-ac" viewBox="0 0 48 48"><rect x="4" y="9" width="40" height="15" rx="3.5" fill="#fff" stroke="#b8c0c4" stroke-width="1.2"/><rect x="7" y="18.5" width="34" height="3" rx="1.5" fill="#d7dde0"/><path d="M8 20h32" stroke="#9aa3a8" stroke-width=".8"/><circle cx="38" cy="13.5" r="1.3" fill="#3fbf6a"/><rect x="8" y="12.5" width="10" height="2" rx="1" fill="#e6eaec"/><g fill="none" stroke="#5aa7e0" stroke-width="1.8" stroke-linecap="round"><path d="M14 28c-1.5 2.5 1.5 4 0 6.5"/><path d="M24 28c-1.5 2.5 1.5 4 0 6.5s1.5 4 0 6.5"/><path d="M34 28c-1.5 2.5 1.5 4 0 6.5"/></g></symbol>
+<symbol id="rt-month" viewBox="0 0 48 48"><rect x="7" y="9" width="34" height="33" rx="4" fill="#fff" stroke="#d3c7b4" stroke-width="1"/><path d="M7 13a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v5H7z" fill="#e24b4a"/><rect x="14" y="5" width="3" height="8" rx="1.5" fill="#6b6b6b"/><rect x="31" y="5" width="3" height="8" rx="1.5" fill="#6b6b6b"/><g fill="#c9c1b4"><rect x="11" y="22" width="5" height="4" rx="1"/><rect x="19" y="22" width="5" height="4" rx="1"/><rect x="27" y="22" width="5" height="4" rx="1"/><rect x="11" y="29" width="5" height="4" rx="1"/><rect x="19" y="29" width="5" height="4" rx="1"/><rect x="11" y="36" width="5" height="3" rx="1"/></g><rect x="27" y="29" width="10" height="10" rx="2" fill="#ef9f27"/><path d="M29.5 34l2 2 3.5-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
 <header>
   <div class="bar">
     <div class="brand"><div class="logo" data-scene="logo" data-motion="0"></div><span>บ้านริมภู<small>ระบบจัดการที่พัก</small></span></div>
@@ -592,6 +606,12 @@ $('#pwForm').onsubmit = async e => {
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2600); }
 
 const roomById = id => db.rooms.find(r => r.id === id);
+// รูปประเภทห้อง (ไม่มีข้อความ ชี้ค้าง = ชื่อประเภท) · ประเภทที่ตั้งเอง → ดูจากคำในชื่อ ไม่เข้าเลย = เตียงเดี่ยวพื้นเทา
+function roomTypeIcon(type) {
+  const t = type || '', k = /แฟมิลี่|ครอบครัว|family/i.test(t) ? 'family' : /คู่|double|twin/i.test(t) ? 'double' : /เดี่ยว|single/i.test(t) ? 'single'
+    : /แอร์|air/i.test(t) ? 'ac' : /พัดลม|fan/i.test(t) ? 'fan' : /รายเดือน|month/i.test(t) ? 'month' : '';
+  return `<span class="rtype${k ? ' rt-' + k : ''}" title="${esc(t || 'ไม่ระบุประเภท')}"><svg><use href="#rt-${k || 'single'}"/></svg></span>`;
+}
 const roomColor = id => {
   const i = Math.max(0, db.rooms.findIndex(r => r.id === id));
   return `var(${COLORS[i % COLORS.length]})`;
@@ -733,7 +753,7 @@ function renderToday() {
     const badge = isIn ? `<span class="stay in">🟢 ${isToday ? 'เช็คอินวันนี้' : 'เช็คอิน'}</span>`
       : `<span class="stay cont">🔵 พักต่อ คืนที่ ${nth}/${st.nights.length}</span>`;
     const leaving = st.out === addDays(key, 1) ? ` · <b style="display:inline;color:var(--c2)">ออก${isToday ? 'พรุ่งนี้' : 'วันถัดไป'}</b>` : '';
-    return `<div class="titem"><span class="dot" style="background:${roomColor(e.roomId)}"></span>
+    return `<div class="titem">${roomTypeIcon(r?.type)}
       <div class="who"><b>ห้อง ${esc(r?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}${badge}</b>
         <span>${baht(e.amount)}${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.channel ? ' · ' + esc(e.channel) : ''}${leaving}${extra || ''}</span></div>
       ${paidTag([e])}</div>`;  // เฉพาะคืนนี้: ยอด/ช่องทาง/สถานะของคืนนี้
