@@ -773,7 +773,7 @@ function renderToday() {
   // แบ่งกลุ่มตามเดือน: หัวกลุ่ม = ชื่อเดือน + จำนวนคืน + ยอดค้างของเดือนนั้น
   const dueByMon = new Map();
   dueEs.forEach(n => { const k = n.date.slice(0, 7); dueByMon.set(k, [...(dueByMon.get(k) || []), n]); });
-  const dueItem = n => `<div class="titem"><span class="dot" style="background:${roomColor(n.roomId)}"></span>
+  const dueItem = n => `<div class="titem">${roomTypeIcon(roomById(n.roomId)?.type)}
       <div class="who"><b>ห้อง ${esc(roomById(n.roomId)?.name || '?')} · ${esc(n.guest || 'ไม่ระบุชื่อ')}</b>
         <span>${TH_DOW[parseYmd(n.date).getDay()]}. ${shortTh(n.date)}${n.date.slice(0, 4) !== String(today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}${telLink(n.phone)} · ค้าง <b style="display:inline;color:var(--danger)">${baht(remaining(n))}</b>${received(n) ? ` (มัดจำแล้ว ${baht(received(n))})` : ''}</span></div>
       ${paidTag([n])}</div>`;
