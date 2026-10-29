@@ -967,11 +967,17 @@ function syncDeposit() {
   if (!on) f.deposit.value = '';
 }
 $('#entryForm').paid.onchange = () => { syncDeposit(); if ($('#entryForm').paid.value === 'dep') $('#entryForm').deposit.focus(); };
-// ลูกค้าเก่า: เลือกชื่อจากรายการ
+// ลูกค้าเก่า: เลือกชื่อจากรายการ — ขึ้นรายชื่อเมื่อพิมพ์อย่างน้อย 1 ตัว (ช่องว่าง = ไม่แสดง) เฉพาะชื่อที่ขึ้นต้นด้วยตัวที่พิมพ์
+let guestNames = [];
 $('#entryForm').guest.onfocus = () => {
   const names = new Map();
   db.entries.forEach(e => { if (e.guest) names.set(guestKey(e.guest), e.guest.trim()); });
-  $('#guestList').innerHTML = [...names.values()].map(n => `<option value="${esc(n)}">`).join('');
+  guestNames = [...names.values()];
+  $('#guestList').innerHTML = '';
+};
+$('#entryForm').guest.oninput = e => {
+  const k = guestKey(e.target.value);
+  $('#guestList').innerHTML = k ? guestNames.filter(n => guestKey(n).startsWith(k)).slice(0, 20).map(n => `<option value="${esc(n)}">`).join('') : '';
 };
 // พักต่อ: คืนก่อนหน้าห้องเดียวกัน + ชื่อตรงกัน → ใช้เบอร์ของคืนนั้น (ข้อมูลที่โหลดไว้แล้ว ไม่เรียก API)
 // ไม่ใช่พักต่อ = ไม่เติม · เติมเฉพาะตอนเพิ่มรายการใหม่ และช่องเบอร์ว่างหรือเป็นเบอร์ที่เติมให้เอง (ไม่ทับที่พิมพ์เอง)
