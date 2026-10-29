@@ -180,7 +180,17 @@ svg .grid{stroke:var(--line)}
 .titem .who{flex:1;min-width:0}
 .titem .who b{display:block}
 .titem .who span{font-size:13px;color:var(--muted)}
-/* รูปประเภทห้อง (รายการเข้าพักคืนนี้) */
+/* หน้าวันนี้: เข้าพักคืนนี้ = การ์ดหลัก (กรอบสีหลัก หัวการ์ดมีแถบสี) · ค้างชำระทั้งหมด = การ์ดรอง (พื้นจาง หัวข้อเล็ก) */
+.card.focus{border:2px solid var(--accent);padding:0;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.07)}
+.card.focus .fhead{background:var(--accent-soft);padding:12px 16px;margin:0 0 12px}
+.card.focus h3{font-size:18px;color:var(--accent)}
+.card.focus .tlist{padding:0 16px 16px}
+.fcount{background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px}
+.card.subtle{background:var(--other)}
+.card.subtle h3{font-size:14px;color:var(--muted)}
+.card.subtle .titem{background:var(--panel)}
+.card.subtle .rtype{width:36px;height:36px;border-radius:8px}.card.subtle .rtype svg{width:30px;height:30px}
+/* รูปประเภทห้อง (รายการเข้าพักคืนนี้ / ค้างชำระ) */
 .rtype{width:46px;height:46px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:#f1efe8}
 .rtype svg{width:40px;height:40px}
 .rt-single{background:#e6f1fb}.rt-double{background:#fbeaf0}.rt-family{background:#eaf3de}.rt-fan{background:#e1f5ee}.rt-ac{background:#eeedfe}.rt-month{background:#faeeda}
@@ -252,9 +262,9 @@ nav button{white-space:nowrap}
     </div>
     <div class="kpis" id="tdKpis"></div>
     <div class="tday">
-      <div class="card"><h3 id="tdInTitle">🛏 เข้าพักคืนนี้</h3><div class="tlist" id="tdIn"></div></div>
+      <div class="card focus"><div class="row fhead"><h3 id="tdInTitle" style="margin:0">🛏 เข้าพักคืนนี้</h3><div class="sp"></div><span class="fcount" id="tdInCount"></span></div><div class="tlist" id="tdIn"></div></div>
     </div>
-    <div class="card" style="margin-top:16px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0">💸 ค้างชำระทั้งหมด</h3><div class="sp"></div><div id="tdDueSum" style="text-align:right"></div></div><div class="tlist" id="tdDue"></div></div>
+    <div class="card subtle" style="margin-top:16px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0">💸 ค้างชำระทั้งหมด</h3><div class="sp"></div><div id="tdDueSum" style="text-align:right"></div></div><div class="tlist" id="tdDue"></div></div>
   </section>
 
   <!-- ห้องพัก -->
@@ -764,6 +774,7 @@ function renderToday() {
   const rname = e => roomById(e.roomId)?.name || '';
   const tonightList = [...tonight].sort((a, b) => rname(a).localeCompare(rname(b), 'th', { numeric: true }));
   $('#tdInTitle').textContent = isToday ? '🛏 เข้าพักคืนนี้' : `🛏 เข้าพักคืน ${shortTh(key)}`;
+  $('#tdInCount').textContent = `${tonight.length} ห้อง`; $('#tdInCount').hidden = !tonight.length;
   $('#tdIn').innerHTML = tonightList.map(e => item(e)).join('') || empty(isToday ? 'ไม่มีผู้เข้าพักคืนนี้' : 'ไม่มีผู้เข้าพักคืนนั้น');
 
   // สรุปยอดค้างทั้งหมดไว้ที่หัวการ์ด (แทนกล่องตัวเลขด้านบน)
