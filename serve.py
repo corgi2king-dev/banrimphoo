@@ -51,10 +51,11 @@ EMPTY = {"rooms": [], "entries": []}
 TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
              "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
 STATIC = {"/": "index.html", "/index.html": "index.html", "/login": "login.html", "/login.html": "login.html",
-          "/scene.js": "scene.js", "/photo.jpg": "photo.jpg", "/favicon.svg": "favicon.svg"}
-TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".jpg": "image/jpeg", ".svg": "image/svg+xml"}
+          "/scene.js": "scene.js", "/photo.jpg": "photo.jpg", "/favicon.svg": "favicon.svg",
+          "/manifest.webmanifest": "manifest.webmanifest", "/icon-192.png": "icon-192.png", "/icon-512.png": "icon-512.png", "/apple-touch-icon.png": "apple-touch-icon.png"}
+TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".png": "image/png", ".webmanifest": "application/manifest+json"}
 # photo.jpg = รูปจริงของที่พัก (ไม่บังคับ) ถ้ามีจะใช้เป็นพื้นหลังหน้าล็อกอินแทนภาพวาด
-PUBLIC = {"/login", "/login.html", "/scene.js", "/photo.jpg", "/favicon.svg", "/api/me", "/api/login", "/api/setup"}
+PUBLIC = {"/login", "/login.html", "/scene.js", "/photo.jpg", "/favicon.svg", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/api/me", "/api/login", "/api/setup"}
 COOKIE = "brp_session"
 VIEW_ONLY = "บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้"
 SESSION_TTL = 7 * 24 * 3600
@@ -125,6 +126,13 @@ def save_months(folder, items):
 
 def load_db():
     return {"rooms": read_json(ROOMS, []), "entries": load_months(ENTRIES), "expenses": load_months(EXPENSES)}
+
+
+def data_version():
+    """เวอร์ชันข้อมูล (เหมือน /api/version ของ worker): เวลาแก้ไฟล์ล่าสุด + จำนวนไฟล์ ของห้อง/การจอง/ค่าใช้จ่าย"""
+    files = [ROOMS] + [os.path.join(d, f) for d in (ENTRIES, EXPENSES) if os.path.isdir(d) for f in os.listdir(d) if f.endswith(".json")]
+    times = [os.stat(f).st_mtime_ns for f in files if os.path.exists(f)]
+    return f"{max(times, default=0)}-{len(times)}"
 
 
 def save_db(db):
@@ -348,7 +356,20 @@ class Handler(SimpleHTTPRequestHandler):
         if p in ("/login", "/login.html") and s:
             return self._redirect("/")
         if p == "/api/data":
-            return self._json(200, {**load_db(), "user": s["user"], "role": s["role"]})
+            v = data_version()  # อ่านก่อนข้อมูล (เหตุผลเดียวกับ worker)
+            q = {k: x[0] for k, x in parse_qs(urlparse(self.path).query).items()}
+            d = load_db()
+            if re.match(r"^\d{4}$", q.get("year", "")):  # ?year= เหมือน worker: ปีนั้น + ธ.ค./ม.ค. ข้างเคียง · &unpaid=1 แนบค้างชำระทุกปี + ปีที่มีข้อมูล
+                y = int(q["year"]); lo, hi = f"{y - 1}-12-01", f"{y + 1}-02-01"
+                pick = lambda xs: [x for x in xs if lo <= x["date"] < hi]
+                out = {"year": y, "rooms": d["rooms"], "entries": pick(d["entries"]), "expenses": pick(d["expenses"])}
+                if q.get("unpaid") == "1":
+                    out["unpaid"] = [e for e in d["entries"] if not e.get("paid")]
+                    out["years"] = sorted({int(x["date"][:4]) for x in d["entries"] + d["expenses"]}, reverse=True)
+                d = out
+            return self._json(200, {**d, "v": v, "user": s["user"], "role": s["role"]})
+        if p == "/api/version":
+            return self._json(200, {"v": data_version()})
         if p == "/api/export":
             return self._export()
         if p == "/api/history" and s["role"] != "admin":

@@ -1,7 +1,7 @@
 // บ้านริมภู · Cloudflare Worker (แทน serve.py เมื่อรันบน Cloudflare)
 // หน้าเว็บอยู่ใน public/ (assets) · ข้อมูลอยู่ใน D1 (binding DB) แยกคอลัมน์ — ดู worker/schema.sql, worker/columns.js
 // สิทธิ์: admin ทำได้ทุกอย่าง · viewer ดูอย่างเดียว (ห้าม /api/changes, /api/history)
-// API เหมือน serve.py: /api/me, /api/login, /api/logout, /api/password, GET /api/data, POST /api/changes, /api/export
+// API เหมือน serve.py: /api/me, /api/login, /api/logout, /api/password, GET /api/data, GET /api/version, POST /api/changes, /api/export
 // สร้างผู้ใช้: npm run user (scripts/create-user.mjs) — ไม่มีหน้าตั้งผู้ใช้ครั้งแรกบนเว็บ เพราะเว็บเปิดให้ทุกคนเข้าถึง
 // งานรายวัน (cron ใน wrangler.jsonc): ลบประวัติ (เมนูประวัติ) ที่เก่ากว่า 1 เดือน
 import { buildXlsx } from './xlsx.js';
@@ -10,11 +10,12 @@ import { fromRow, toRow, upsertSql } from './columns.js';
 const COOKIE = 'brp_session';
 const SESSION_TTL = 7 * 24 * 3600;
 const ITER = 100_000; // เพดาน PBKDF2 ของ Workers
-const PUBLIC = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/api/me', '/api/login']);
+const PUBLIC = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/api/me', '/api/login']);
 // ไม่ต้องเช็ก session (ไม่แตะ D1) — หน้าล็อกอินเช็กเองผ่าน /api/me แล้ว redirect ฝั่งเบราว์เซอร์
-const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/api/login']);
+const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/api/login']);
 // cache: รูป → เก็บไว้ 1 วัน · scene.js / หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag) — แก้ scene.js แล้วเห็นผลทันทีหลัง deploy
-const CACHE = { '/scene.js': 'public, no-cache', '/photo.jpg': 'public, max-age=86400', '/favicon.svg': 'public, max-age=86400' };
+const CACHE = { '/scene.js': 'public, no-cache', '/photo.jpg': 'public, max-age=86400', '/favicon.svg': 'public, max-age=86400',
+  '/manifest.webmanifest': 'public, max-age=86400', '/icon-192.png': 'public, max-age=86400', '/icon-512.png': 'public, max-age=86400', '/apple-touch-icon.png': 'public, max-age=86400' };  // ไฟล์ติดตั้งแอป (PWA) — มือถืออ่านก่อนล็อกอิน
 const KINDS = ['rooms', 'entries', 'expenses'];
 const VIEW_ONLY = 'บัญชีนี้ดูได้อย่างเดียว — เพิ่ม/แก้ไข/ลบไม่ได้';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -99,6 +100,39 @@ async function newSession(env, user) {
     env.DB.prepare('INSERT INTO sessions (token, user, exp) VALUES (?, ?, ?)').bind(await sha256(tok), user, now() + SESSION_TTL),
   ]);
   return cookie(tok, SESSION_TTL);
+}
+
+// เวอร์ชันข้อมูล (หน้าเว็บเช็กทุก 1 นาที แล้วดึง /api/data เฉพาะตอนเปลี่ยน) — ไม่มีตารางเพิ่ม:
+// เลขล่าสุดของ history (เพิ่มทุกครั้งที่เพิ่ม/แก้/ลบการจอง-ค่าใช้จ่าย · ไม่ย้อนกลับแม้ลบประวัติเก่า) + ลายนิ้วมือข้อมูลห้อง (แก้ห้องไม่ลงประวัติ)
+const historyMax = async env => (await env.DB.prepare('SELECT max(id) AS h FROM history').first('h')) || 0;
+function dataVersion(h, rooms) {
+  let x = 2166136261;  // FNV-1a ของข้อมูลห้อง
+  for (const c of JSON.stringify(rooms)) x = Math.imul(x ^ c.charCodeAt(0), 16777619) >>> 0;
+  return `${h}-${x.toString(36)}`;
+}
+async function currentVersion(env) {
+  const [h, rooms] = await env.DB.batch([env.DB.prepare('SELECT max(id) AS h FROM history'), env.DB.prepare('SELECT * FROM rooms ORDER BY pos')]);
+  return dataVersion(h.results[0].h || 0, rooms.results.map(r => fromRow('rooms', r)));
+}
+
+// ข้อมูลรายปี: ช่วง 1 ธ.ค. ปีก่อน – 31 ม.ค. ปีหน้า (ปฏิทินเดือน ม.ค./ธ.ค. เห็นวันข้างเคียง + การจองหลายคืนข้ามปี)
+async function loadYear(env, y, withUnpaid) {
+  const from = `${y - 1}-12-01`, to = `${y + 1}-02-01`;
+  const qs = [
+    env.DB.prepare('SELECT * FROM rooms ORDER BY pos'),
+    env.DB.prepare('SELECT * FROM entries WHERE date >= ? AND date < ? ORDER BY date').bind(from, to),
+    env.DB.prepare('SELECT * FROM expenses WHERE date >= ? AND date < ? ORDER BY date').bind(from, to),
+  ];
+  if (withUnpaid) qs.push(
+    env.DB.prepare('SELECT * FROM entries WHERE paid = 0 ORDER BY date'),  // ค้างชำระ/มัดจำ ทุกปี (การ์ดค้างชำระทั้งหมด)
+    env.DB.prepare('SELECT substr(date, 1, 4) AS y FROM entries UNION SELECT substr(date, 1, 4) FROM expenses ORDER BY 1 DESC'));  // ปีที่มีข้อมูล (ตัวเลือกปีหน้าสรุป)
+  const [rooms, entries, expenses, unpaid, years] = await env.DB.batch(qs);
+  return {
+    year: y, rooms: rooms.results.map(r => fromRow('rooms', r)),
+    entries: entries.results.map(r => fromRow('entries', r)),
+    expenses: expenses.results.map(r => fromRow('expenses', r)),
+    ...(withUnpaid ? { unpaid: unpaid.results.map(r => fromRow('entries', r)), years: years.results.map(r => +r.y) } : {}),
+  };
 }
 
 async function loadDb(env, period = '') {
@@ -252,7 +286,15 @@ async function handle(req, env) {
   if (req.method === 'GET') {
     if (p === '/api/me') return json(200, { user: s?.user || null, role: s?.role || null, setup: false });
     if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
-    if (p === '/api/data') return json(200, { ...await loadDb(env), user: s.user, role: s.role });  // รวมชื่อผู้ใช้/สิทธิ์มาด้วย ไม่ต้องเรียก /api/me อีกรอบ
+    if (p === '/api/data') {  // รวมชื่อผู้ใช้/สิทธิ์ + เวอร์ชันข้อมูลมาด้วย ไม่ต้องเรียก /api/me อีกรอบ
+      // ?year=YYYY → เฉพาะปีนั้น (+ ธ.ค. ปีก่อน / ม.ค. ปีหน้า สำหรับการจองข้ามปี) · &unpaid=1 → แนบการจองที่ยังไม่จ่ายครบทุกปี + รายชื่อปีที่มีข้อมูล
+      // ไม่ใส่ year = ทั้งหมด (แบบเดิม)
+      const q = url.searchParams, y = /^\d{4}$/.test(q.get('year') || '') ? +q.get('year') : null;
+      const h = await historyMax(env);  // อ่านเลขประวัติก่อนข้อมูล → ถ้ามีคนแก้ระหว่างนี้ เครื่องจะเห็นเวอร์ชันไม่ตรงแล้วดึงใหม่
+      const d = y ? await loadYear(env, y, q.get('unpaid') === '1') : await loadDb(env);
+      return json(200, { ...d, v: dataVersion(h, d.rooms), user: s.user, role: s.role });
+    }
+    if (p === '/api/version') return json(200, { v: await currentVersion(env) });
     if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
   if (p === '/api/history') return s.role === 'admin' ? history(env, url.searchParams) : json(403, { error: VIEW_ONLY });
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });

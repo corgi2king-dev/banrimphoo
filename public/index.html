@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>บ้านริมภู · จัดการที่พัก</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- ติดตั้งเป็นแอปบนมือถือ (PWA): ไฟล์ตั้งค่าแอป + ไอคอน iPhone + เปิดเต็มจอ -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#2f6b4f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="บ้านริมภู">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{
   --bg:#f6f4ef; --panel:#fff; --ink:#1f2a24; --muted:#6b756f; --line:#e3e0d8;
@@ -541,13 +549,27 @@ async function setPay(nights, v) {
 }
 
 // ---------- storage ----------
+// โหลดข้อมูลทีละปี: เปิดเว็บ = ปีนี้ + การจองค้างชำระทุกปี · เลื่อนไปปีอื่น (ปฏิทิน/ค่าใช้จ่าย/วันนี้/สรุป) ค่อยโหลดปีนั้น (ensureYear)
+// แต่ละปีได้ช่วง ธ.ค. ปีก่อน – ม.ค. ปีหน้ามาด้วย (การจองข้ามปี) · ดึงใหม่อัตโนมัติ = ดึงทุกปีที่โหลดไว้
+let loadedYears = new Set(), dataYears = [];
+async function fetchYear(y, unpaid) {
+  const r = await fetch(`api/data?year=${y}${unpaid ? '&unpaid=1' : ''}`, { cache: 'no-store' });
+  if (r.status === 401) return toLogin();
+  if (!r.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+  return r.json();
+}
+const byId = lists => [...new Map(lists.flat().map(x => [x.id, x])).values()];  // รวมหลายชุด ไม่ซ้ำ (ชุดหลังทับ)
 async function load() {
   try {
-    const r = await fetch('api/data', { cache: 'no-store' });
-    if (r.status === 401) return toLogin();
-    if (!r.ok) throw 0;
-    db = await r.json(); mode = 'server'; loadedAt = Date.now();
-    serverUser = db.user || null; READONLY = db.role === 'viewer'; delete db.user; delete db.role;
+    const years = loadedYears.size ? [...loadedYears] : [today.getFullYear()];
+    const res = await Promise.all(years.map((y, i) => fetchYear(y, i === 0)));
+    const d = res[0];
+    db = { rooms: d.rooms, entries: byId([d.unpaid || [], ...res.map(x => x.entries)]), expenses: byId(res.map(x => x.expenses)) };
+    db.entries.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    loadedYears = new Set(years); dataYears = d.years || [];
+    mode = 'server'; loadedAt = checkedAt = Date.now();
+    dataVer = res.every(x => x.v === d.v) ? d.v : '';  // ระหว่างโหลดมีคนแก้ → บังคับเช็กใหม่รอบหน้า
+    serverUser = d.user || null; READONLY = d.role === 'viewer';
     document.body.classList.toggle('readonly', READONLY);
   } catch {
     mode = 'local';
@@ -561,6 +583,17 @@ async function load() {
 // บันทึกเฉพาะรายการที่เปลี่ยน (เพิ่ม/แก้/ลบ) เทียบกับที่เซิร์ฟเวอร์มีล่าสุด — หลายเครื่องแก้พร้อมกันไม่ทับกัน
 const KINDS = ['rooms', 'entries', 'expenses'];
 let synced = {}, saving = Promise.resolve();
+// โหลดปีที่ยังไม่มี แล้วรวมเข้ากับข้อมูลเดิม (รอให้บันทึกที่ค้างเสร็จก่อน จะได้ไม่ทับของที่ยังไม่ส่ง)
+async function ensureYear(y) {
+  if (mode !== 'server' || loadedYears.has(y)) return;
+  await saving;
+  try {
+    const d = await fetchYear(y, false);
+    db.entries = byId([db.entries, d.entries]).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    db.expenses = byId([db.expenses, d.expenses]);
+    loadedYears.add(y); snap();
+  } catch (e) { toast(e.message); }
+}
 function snap() { synced = Object.fromEntries(KINDS.map(k => [k, new Map(db[k].map(x => [x.id, JSON.stringify(x)]))])); }
 function changes() {
   const ch = { upsert: {}, delete: {}, roomOrder: db.rooms.map(r => r.id) };
@@ -587,11 +620,23 @@ function save() {
   });
   return saving;
 }
-// กลับมาที่หน้านี้ (สลับแอป/แท็บ) → ดึงข้อมูลล่าสุด เผื่อมีคนอื่นแก้ (ข้ามถ้ากำลังเปิดหน้าต่างอยู่)
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible' || mode !== 'server' || $$('.mask.on').length || Date.now() - loadedAt < 30000) return;
-  await saving; await load(); show(curTab);
-});
+// ดึงข้อมูลใหม่อัตโนมัติ (เห็นสิ่งที่เครื่องอื่นเพิ่ม/แก้/ลบ): เช็ก /api/version (เล็ก) ก่อน → เปลี่ยนค่อยดึง /api/data แล้ววาดเมนูเดิมใหม่
+// เช็กทุก 1 นาที · ตอนเปลี่ยนเมนู/กลับมาที่แท็บ (ถ้าห่างจากครั้งก่อน > 30 วิ) · ข้ามถ้าจอไม่เปิด / กำลังกรอกในหน้าต่าง / กำลังเช็กอยู่
+let dataVer = '', checkedAt = 0, syncing = false;
+async function syncData(minGap = 0) {
+  if (mode !== 'server' || syncing || document.visibilityState !== 'visible' || $$('.mask.on').length || Date.now() - checkedAt < minGap) return;
+  syncing = true;
+  try {
+    await saving;
+    const r = await fetch('api/version', { cache: 'no-store' });
+    if (r.status === 401) return toLogin();
+    checkedAt = Date.now();
+    if (!r.ok || (await r.json()).v === dataVer || $$('.mask.on').length) return;
+    await load(); show(curTab, true);
+  } catch {} finally { syncing = false; }
+}
+setInterval(() => syncData(), 60000);
+document.addEventListener('visibilitychange', () => syncData(30000));
 function toLogin() { location.replace('/login'); return new Promise(() => {}); }
 let serverUser = null, loadedAt = 0, READONLY = false;  // READONLY = บัญชี viewer (ดูอย่างเดียว)  // มากับ /api/data — ไม่ต้องเรียก /api/me แยก (ลด 1 รอบ)
 async function showUser() {
@@ -661,7 +706,7 @@ function renderHero() {
 }
 let curTab = 'today';
 const VIEWER_TABS = ['today', 'calendar', 'expenses', 'summary'];
-function show(tab) {
+function show(tab, keep) {  // keep = วาดใหม่หลังดึงข้อมูล (ไม่รีเซ็ตตัวเลือกปี/เดือนของหน้าสรุป)
   if (READONLY && !VIEWER_TABS.includes(tab)) tab = 'today';
   curTab = tab;
   renderHero();
@@ -669,9 +714,9 @@ function show(tab) {
   $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $$('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);  // จำเมนูไว้ในที่อยู่เว็บ → refresh แล้วอยู่เมนูเดิม
-  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: renderSummary, history: renderHistory })[tab]();
+  ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: () => renderSummary(keep), history: renderHistory })[tab]();
 }
-$$('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+$$('nav button').forEach(b => b.onclick = () => { show(b.dataset.tab); syncData(30000); });
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
 $$('.mask:not(#askMask)').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) m.classList.remove('on'); }));
 document.addEventListener('keydown', e => {
@@ -817,9 +862,10 @@ function renderToday() {
     if (await setPay(nights, sel.value)) save(); else renderToday();
   });
 }
-$('#tdPrev').onclick = () => { tdDay = addDays(tdDay, -1); renderToday(); };
-$('#tdNext').onclick = () => { tdDay = addDays(tdDay, 1); renderToday(); };
-$('#tdToday').onclick = () => { tdDay = ymd(today); renderToday(); };
+const tdGo = async d => { tdDay = d; await ensureYear(+d.slice(0, 4)); renderToday(); };
+$('#tdPrev').onclick = () => tdGo(addDays(tdDay, -1));
+$('#tdNext').onclick = () => tdGo(addDays(tdDay, 1));
+$('#tdToday').onclick = () => tdGo(ymd(today));
 
 // ---------- rooms ----------
 function renderRooms() {
@@ -921,9 +967,10 @@ function renderCal() {
   $$('#cal .d').forEach(c => c.onclick = () => openDay(c.dataset.date));
   $('#calLegend').innerHTML = (db.rooms.length ? '<span><span class="dot" style="background:var(--accent)"></span>แถบเขียว = ชำระแล้ว</span><span><span class="avail" style="font-size:11.5px;font-weight:700;padding:0 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)">2/8</span> = ห้องว่าง/ทั้งหมด</span><span><span class="dot" style="background:var(--dep)"></span>แถบเหลือง = มัดจำ</span><span><span class="dot" style="background:var(--danger)"></span>แถบแดง = ค้างชำระ</span>' : '<span>ยังไม่มีห้อง — ไปที่ "จัดการห้องพัก" ก่อน</span>');
 }
-$('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } renderCal(); };
-$('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } renderCal(); };
-$('#calToday').onclick = () => { calY = today.getFullYear(); calM = today.getMonth(); renderCal(); };
+const calGo = async () => { await ensureYear(calY); renderCal(); };
+$('#calPrev').onclick = () => { if (--calM < 0) { calM = 11; calY--; } calGo(); };
+$('#calNext').onclick = () => { if (++calM > 11) { calM = 0; calY++; } calGo(); };
+$('#calToday').onclick = () => { calY = today.getFullYear(); calM = today.getMonth(); calGo(); };
 
 let curDay = null, editingEntry = null;
 function openDay(date) {
@@ -1092,9 +1139,10 @@ function renderExCal() {
   $('#exLegend').innerHTML = EX_CATS.map(([c]) => `<span><span class="dot" style="background:${exColor(c)}"></span>${c}${byCat[c] ? ` <b>${baht(byCat[c])}</b>` : ''}</span>`).join('')
     + Object.keys(byCat).filter(c => !EX_CATS.some(x => x[0] === c)).map(c => `<span>${esc(c)} <b>${baht(byCat[c])}</b></span>`).join('');
 }
-$('#exPrev').onclick = () => { if (--exM < 0) { exM = 11; exY--; } renderExCal(); };
-$('#exNext').onclick = () => { if (++exM > 11) { exM = 0; exY++; } renderExCal(); };
-$('#exToday').onclick = () => { exY = today.getFullYear(); exM = today.getMonth(); renderExCal(); };
+const exGo = async () => { await ensureYear(exY); renderExCal(); };
+$('#exPrev').onclick = () => { if (--exM < 0) { exM = 11; exY--; } exGo(); };
+$('#exNext').onclick = () => { if (++exM > 11) { exM = 0; exY++; } exGo(); };
+$('#exToday').onclick = () => { exY = today.getFullYear(); exM = today.getMonth(); exGo(); };
 
 function openExDay(date) {
   exDay = date; resetExForm();
@@ -1215,7 +1263,7 @@ $('#hiPgNext').onclick = () => goHistoryPage(hiPage + 1);
 
 // ---------- summary ----------
 function initSummaryFilters() {
-  const years = new Set([today.getFullYear(), ...db.entries.map(e => +e.date.slice(0, 4))]);
+  const years = new Set([today.getFullYear(), ...dataYears, ...loadedYears]);  // ปีที่มีข้อมูล (จากเซิร์ฟเวอร์) — ยังไม่โหลดก็เลือกได้
   const ys = $('#sumYear'), ms = $('#sumMonth');
   const prevY = ys.value, prevM = ms.value;
   ys.innerHTML = [...years].sort((a, b) => b - a).map(y => `<option value="${y}">${be(y)}</option>`).join('');
@@ -1223,7 +1271,8 @@ function initSummaryFilters() {
   ys.value = prevY && years.has(+prevY) ? prevY : today.getFullYear();
   ms.value = prevM || String(today.getMonth());
 }
-$('#sumYear').onchange = $('#sumMonth').onchange = () => renderSummary(true);
+$('#sumYear').onchange = async () => { await ensureYear(+$('#sumYear').value); renderSummary(true); };
+$('#sumMonth').onchange = () => renderSummary(true);
 // Excel สร้างที่เซิร์ฟเวอร์ (ช่วงตามปี/เดือนที่เลือกอยู่)
 $('#btnExcel').onclick = async () => {
   if (mode !== 'server') return toast('ดาวน์โหลด Excel ได้เมื่อเปิดผ่าน serve.py');
