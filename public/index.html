@@ -619,9 +619,7 @@ function save() {
       if (mode === 'server') {
         const r = await fetch('api/changes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes()) });
         if (r.status === 401) { toast('หมดเวลาเข้าสู่ระบบ — กรุณาเข้าใหม่'); return setTimeout(toLogin, 1200); }
-        const res = await r.json();
-        if (!r.ok) throw new Error(res.error);
-        if (res.histCount > 0) histMineAdd(res.histLast - res.histCount + 1, res.histLast);  // เครื่องนี้ทำเอง → ไม่นับในป้าย
+        if (!r.ok) throw new Error((await r.json()).error);
         snap();
       } else localStorage.setItem('banrimphoo', JSON.stringify(db));
       toast('บันทึกแล้ว'); renderHero();
@@ -643,20 +641,16 @@ async function syncData(minGap = 0) {
     checkedAt = Date.now();
     if (!r.ok) return;
     const x = await r.json();
-    histNow = +String(x.v).split('-')[0] || histNow; if (x.ids) setHistBadge(curTab === 'history' ? 0 : othersNew(x.ids).length);
+    histNow = +String(x.v).split('-')[0] || histNow; if ('n' in x) setHistBadge(curTab === 'history' ? 0 : x.n);
     if (x.v === dataVer || $$('.mask.on').length) return;
     await load(); show(curTab, true);
   } catch {} finally { syncing = false; }
 }
 setInterval(() => syncData(), 60000);
-// ป้ายรายการประวัติใหม่ (admin): นับรายการที่ "เครื่องอื่น" ทำ (บัญชีเดียวกันแต่คนละเครื่องก็นับ) หลังเลขที่เครื่องนี้ดูล่าสุด
-// จำในเครื่อง แยกตามผู้ใช้: brp-hist-seen = เลขที่ดูล่าสุด · brp-hist-mine = ช่วงเลขที่เครื่องนี้บันทึกเอง [[จาก, ถึง], …]
-let histNow = 0, hiNewSince = Infinity, hiMine = [];
-const histKey = () => 'brp-hist-seen:' + (serverUser || ''), mineKey = () => 'brp-hist-mine:' + (serverUser || '');
-function histMine() { try { return JSON.parse(localStorage.getItem(mineKey()) || '[]'); } catch { return []; } }
-function histMineAdd(a, b) { try { localStorage.setItem(mineKey(), JSON.stringify([...histMine(), [a, b]])); } catch {} }
-const isMineHist = (id, mine = histMine()) => mine.some(([a, b]) => id >= a && id <= b);
-const othersNew = ids => { const mine = histMine(); return ids.filter(id => !isMineHist(id, mine)); };
+// ป้ายรายการประวัติใหม่ (admin): นับรายการที่ "ผู้ใช้คนอื่น" ทำ หลังเลขประวัติที่เครื่องนี้ดูล่าสุด (บัญชีเดียวกันไม่นับ แม้คนละเครื่อง)
+// เลขที่ดูล่าสุดจำในเครื่อง แยกตามผู้ใช้ (brp-hist-seen)
+let histNow = 0, hiNewSince = Infinity;
+const histKey = () => 'brp-hist-seen:' + (serverUser || '');
 function histSeen() {
   let v = null; try { v = localStorage.getItem(histKey()); } catch {}
   if (v === null) { v = histNow; try { localStorage.setItem(histKey(), v); } catch {} }  // ครั้งแรกในเครื่องนี้: เริ่มนับจากตอนนี้
@@ -668,12 +662,9 @@ async function openHistoryNew() {
   if (READONLY || mode !== 'server') return;
   const since = histSeen();
   let n = 0;
-  try { const x = await (await fetch(`api/version?since=${since}`, { cache: 'no-store' })).json(); n = othersNew(x.ids || []).length; histNow = +String(x.v).split('-')[0] || histNow; } catch {}
-  hiNewSince = n ? since : Infinity; hiMine = histMine();  // เก็บไว้ไฮไลต์ก่อนล้างช่วงเก่า
-  try {
-    localStorage.setItem(histKey(), histNow);
-    localStorage.setItem(mineKey(), JSON.stringify(histMine().filter(([, b]) => b > histNow)));  // ช่วงที่เก่ากว่าที่ดูแล้ว ไม่ต้องจำ
-  } catch {}
+  try { const x = await (await fetch(`api/version?since=${since}`, { cache: 'no-store' })).json(); n = x.n || 0; histNow = +String(x.v).split('-')[0] || histNow; } catch {}
+  hiNewSince = n ? since : Infinity;
+  try { localStorage.setItem(histKey(), histNow); } catch {}
   setHistBadge(0);
   $('#hiNew').hidden = !n; $('#hiNewTxt').textContent = `🔔 มี ${n} รายการใหม่ ตั้งแต่เปิดดูครั้งล่าสุด`;
 }
@@ -1292,7 +1283,7 @@ function renderHistoryPage() {
   $('#hiPgPrev').disabled = hiPage <= 1; $('#hiPgNext').disabled = hiPage >= pages;
   $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
     const d = new Date(h.at * 1000), e = h.after || h.before;
-    const isNew = h.id > hiNewSince && !isMineHist(h.id, hiMine);
+    const isNew = h.id > hiNewSince && h.user !== serverUser;
     return `<div class="hrow${isNew ? ' new' : ''}"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
       <div class="a"><span class="act ${h.action}">${ACT[h.action]}</span>${isNew ? '<span class="newtag">ใหม่</span>' : ''}</div>
       <div class="what">${describe(h.kind, e)}${h.action === 'update' ? `<div class="chg">${changesOf(h.kind, h.before, h.after) || 'ไม่มีการเปลี่ยนที่แสดงได้'}</div>` : ''}</div></div>`;
