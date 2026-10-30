@@ -176,28 +176,32 @@ async function historyStmts(env, user, up, de) {
   return out;
 }
 
+// คืน { error } ถ้าผิด · ไม่งั้น { histLast, histCount } = เลขประวัติสุดท้ายที่สร้าง + จำนวน (เลขในการบันทึกครั้งเดียวเรียงต่อกัน
+// เพราะอยู่ใน batch เดียว) — หน้าเว็บจำช่วงนี้ว่า "เครื่องนี้ทำเอง" จะได้ไม่นับในป้ายประวัติใหม่
 async function applyChanges(env, ch, user) {
   const up = ch.upsert || {}, de = ch.delete || {}, stmts = [];
   for (const k of KINDS) {
     const ups = up[k] || [], dels = de[k] || [];
-    if (!Array.isArray(ups) || !Array.isArray(dels)) return `${k} ต้องเป็น list`;
+    if (!Array.isArray(ups) || !Array.isArray(dels)) return { error: `${k} ต้องเป็น list` };
     for (const x of ups) {
-      if (!x || typeof x !== 'object' || !x.id) return `${k} ทุกรายการต้องมี id`;
-      if (k !== 'rooms' && !DATE.test(String(x.date || ''))) return `${k} ต้องมี date แบบ YYYY-MM-DD`;
-      if (k === 'entries' && !x.roomId) return 'การจองต้องระบุห้อง';
+      if (!x || typeof x !== 'object' || !x.id) return { error: `${k} ทุกรายการต้องมี id` };
+      if (k !== 'rooms' && !DATE.test(String(x.date || ''))) return { error: `${k} ต้องมี date แบบ YYYY-MM-DD` };
+      if (k === 'entries' && !x.roomId) return { error: 'การจองต้องระบุห้อง' };
       const { vals } = toRow(k, x);
       stmts.push(env.DB.prepare(upsertSql(k)).bind(...vals, ...(k === 'rooms' ? [9999] : [])));  // ห้องใหม่: pos ตั้งจาก roomOrder ด้านล่าง
     }
     for (const id of dels) stmts.push(env.DB.prepare(`DELETE FROM ${k} WHERE id = ?`).bind(String(id)));
   }
   (ch.roomOrder || []).forEach((id, i) => stmts.push(env.DB.prepare('UPDATE rooms SET pos = ? WHERE id = ?').bind(i, String(id))));
-  if (!stmts.length) return null;
-  stmts.push(...await historyStmts(env, user, up, de));
-  try { await env.DB.batch(stmts); } catch (e) {  // batch = ทั้งหมดหรือไม่มีเลย
-    return /FOREIGN KEY/i.test(e.message) ? 'มีการจองที่อ้างถึงห้องที่ไม่มีแล้ว — โหลดหน้าใหม่แล้วลองอีกครั้ง'
-      : /CHECK/i.test(e.message) ? 'ข้อมูลไม่ถูกต้อง (เช่น ตัวเลขติดลบ หรือวันที่ผิดรูปแบบ)' : `บันทึกไม่สำเร็จ: ${e.message}`;
+  if (!stmts.length) return { histLast: 0, histCount: 0 };
+  const hist = await historyStmts(env, user, up, de);
+  stmts.push(...hist);
+  let res;
+  try { res = await env.DB.batch(stmts); } catch (e) {  // batch = ทั้งหมดหรือไม่มีเลย
+    return { error: /FOREIGN KEY/i.test(e.message) ? 'มีการจองที่อ้างถึงห้องที่ไม่มีแล้ว — โหลดหน้าใหม่แล้วลองอีกครั้ง'
+      : /CHECK/i.test(e.message) ? 'ข้อมูลไม่ถูกต้อง (เช่น ตัวเลขติดลบ หรือวันที่ผิดรูปแบบ)' : `บันทึกไม่สำเร็จ: ${e.message}` };
   }
-  return null;
+  return hist.length ? { histLast: res[res.length - 1].meta.last_row_id, histCount: hist.length } : { histLast: 0, histCount: 0 };
 }
 
 // ประวัติของเดือนที่ทำรายการ (เวลาไทย UTC+7) ใหม่สุดก่อน · โหลดทีละช่วง: offset / limit (สูงสุด 100) · kind = entries | expenses
@@ -294,7 +298,13 @@ async function handle(req, env) {
       const d = y ? await loadYear(env, y, q.get('unpaid') === '1') : await loadDb(env);
       return json(200, { ...d, v: dataVersion(h, d.rooms), user: s.user, role: s.role });
     }
-    if (p === '/api/version') return json(200, { v: await currentVersion(env) });
+    if (p === '/api/version') {
+      // ?since=เลขประวัติที่เครื่องนี้ดูล่าสุด (admin) → ids = เลขประวัติที่ใหม่กว่า (ไม่เกิน 200) · หน้าเว็บตัดเลขที่เครื่องตัวเองทำออกแล้วนับเป็นป้าย
+      const since = url.searchParams.get('since'), v = await currentVersion(env);
+      if (since === null || s.role !== 'admin' || !/^\d+$/.test(since)) return json(200, { v });
+      const r = await env.DB.prepare('SELECT id FROM history WHERE id > ? ORDER BY id LIMIT 200').bind(+since).all();
+      return json(200, { v, ids: r.results.map(x => x.id) });
+    }
     if (p === '/api/export') return exportXlsx(env, url.searchParams.get('period') || '');
   if (p === '/api/history') return s.role === 'admin' ? history(env, url.searchParams) : json(403, { error: VIEW_ONLY });
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });
@@ -316,8 +326,8 @@ async function handle(req, env) {
   if (p === '/api/password') return changePassword(env, s, body);
   if (p === '/api/changes') {
     if (s.role !== 'admin') return json(403, { error: VIEW_ONLY });  // viewer: ห้ามเพิ่ม/แก้/ลบ
-    const err = await applyChanges(env, body, s.user);
-    return err ? json(400, { error: err }) : json(200, { ok: true });
+    const r = await applyChanges(env, body, s.user);
+    return r.error ? json(400, { error: r.error }) : json(200, { ok: true, ...r });
   }
   return json(404, { error: 'not found' });
 }

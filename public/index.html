@@ -145,6 +145,12 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .charts .grp{grid-column:1/-1;margin:10px 0 -4px;font-size:17px}
 .hist{display:flex;flex-direction:column}
 .hrow{display:grid;grid-template-columns:92px 74px 1fr;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:start;font-size:14px}
+.hrow.new{background:var(--accent-soft);border-radius:8px}
+.newtag{display:inline-block;margin-left:6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:0 7px;border-radius:99px;vertical-align:1px}
+/* ป้ายจำนวนรายการใหม่: วางทับไอคอนนาฬิกาด้านซ้ายของเมนู (ยังอยู่ในขอบปุ่ม → ไม่ถูกแถบเมนูตัด) */
+.nico{position:relative;display:inline-block}
+.nbadge{position:absolute;top:-7px;left:-9px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;box-sizing:border-box;box-shadow:0 0 0 2px var(--panel)}
+.hinew{display:flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:8px 10px;margin-bottom:10px;font-size:14px}
 .hrow .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
 .hrow .t b{display:block;color:var(--ink);font-size:13px}
 .hrow .what b{font-weight:600}
@@ -262,7 +268,7 @@ nav button{white-space:nowrap}
       <button data-tab="expenses">🧾 ค่าใช้จ่าย</button>
       <button data-tab="rooms">🛏 จัดการห้องพัก</button>
       <button data-tab="summary">📊 สรุป</button>
-      <button data-tab="history">🕘 ประวัติ</button>
+      <button data-tab="history"><span class="nico">🕘<span class="nbadge" id="hiBadge" hidden></span></span> ประวัติ</button>
     </nav>
     <div class="user" id="userBox" hidden>
       <div class="uinfo" id="userInfo"></div>
@@ -351,6 +357,7 @@ nav button{white-space:nowrap}
         <label style="width:auto">แสดง <select id="hiKind" style="width:auto">
           <option value="">ทั้งหมด</option><option value="entries">ค่าเช่า</option><option value="expenses">ค่าใช้จ่าย</option></select></label>
       </div>
+      <div class="hinew" id="hiNew" hidden><span id="hiNewTxt"></span><div class="sp"></div><button class="btn sm" id="hiNewOk">รับทราบ</button></div>
       <div id="hiList"></div>
       <div class="row" id="hiPager" style="justify-content:center;margin-top:12px" hidden>
         <button class="btn sm" id="hiPgPrev">‹ ก่อนหน้า</button>
@@ -569,6 +576,7 @@ async function load() {
     loadedYears = new Set(years); dataYears = d.years || [];
     mode = 'server'; loadedAt = checkedAt = Date.now();
     dataVer = res.every(x => x.v === d.v) ? d.v : '';  // ระหว่างโหลดมีคนแก้ → บังคับเช็กใหม่รอบหน้า
+    histNow = +String(d.v).split('-')[0] || 0;
     serverUser = d.user || null; READONLY = d.role === 'viewer';
     document.body.classList.toggle('readonly', READONLY);
   } catch {
@@ -611,7 +619,9 @@ function save() {
       if (mode === 'server') {
         const r = await fetch('api/changes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes()) });
         if (r.status === 401) { toast('หมดเวลาเข้าสู่ระบบ — กรุณาเข้าใหม่'); return setTimeout(toLogin, 1200); }
-        if (!r.ok) throw new Error((await r.json()).error);
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.error);
+        if (res.histCount > 0) histMineAdd(res.histLast - res.histCount + 1, res.histLast);  // เครื่องนี้ทำเอง → ไม่นับในป้าย
         snap();
       } else localStorage.setItem('banrimphoo', JSON.stringify(db));
       toast('บันทึกแล้ว'); renderHero();
@@ -628,14 +638,46 @@ async function syncData(minGap = 0) {
   syncing = true;
   try {
     await saving;
-    const r = await fetch('api/version', { cache: 'no-store' });
+    const r = await fetch(`api/version${READONLY ? '' : `?since=${histSeen()}`}`, { cache: 'no-store' });
     if (r.status === 401) return toLogin();
     checkedAt = Date.now();
-    if (!r.ok || (await r.json()).v === dataVer || $$('.mask.on').length) return;
+    if (!r.ok) return;
+    const x = await r.json();
+    histNow = +String(x.v).split('-')[0] || histNow; if (x.ids) setHistBadge(curTab === 'history' ? 0 : othersNew(x.ids).length);
+    if (x.v === dataVer || $$('.mask.on').length) return;
     await load(); show(curTab, true);
   } catch {} finally { syncing = false; }
 }
 setInterval(() => syncData(), 60000);
+// ป้ายรายการประวัติใหม่ (admin): นับรายการที่ "เครื่องอื่น" ทำ (บัญชีเดียวกันแต่คนละเครื่องก็นับ) หลังเลขที่เครื่องนี้ดูล่าสุด
+// จำในเครื่อง แยกตามผู้ใช้: brp-hist-seen = เลขที่ดูล่าสุด · brp-hist-mine = ช่วงเลขที่เครื่องนี้บันทึกเอง [[จาก, ถึง], …]
+let histNow = 0, hiNewSince = Infinity, hiMine = [];
+const histKey = () => 'brp-hist-seen:' + (serverUser || ''), mineKey = () => 'brp-hist-mine:' + (serverUser || '');
+function histMine() { try { return JSON.parse(localStorage.getItem(mineKey()) || '[]'); } catch { return []; } }
+function histMineAdd(a, b) { try { localStorage.setItem(mineKey(), JSON.stringify([...histMine(), [a, b]])); } catch {} }
+const isMineHist = (id, mine = histMine()) => mine.some(([a, b]) => id >= a && id <= b);
+const othersNew = ids => { const mine = histMine(); return ids.filter(id => !isMineHist(id, mine)); };
+function histSeen() {
+  let v = null; try { v = localStorage.getItem(histKey()); } catch {}
+  if (v === null) { v = histNow; try { localStorage.setItem(histKey(), v); } catch {} }  // ครั้งแรกในเครื่องนี้: เริ่มนับจากตอนนี้
+  return +v || 0;
+}
+function setHistBadge(n) { const b = $('#hiBadge'); b.hidden = !(n > 0); b.textContent = n > 99 ? '99+' : n; }
+// เปิดเมนูประวัติ: จำจุดเริ่มของ "ใหม่" ไว้ไฮไลต์ แล้วถือว่าดูแล้ว (ป้ายที่เมนูหาย)
+async function openHistoryNew() {
+  if (READONLY || mode !== 'server') return;
+  const since = histSeen();
+  let n = 0;
+  try { const x = await (await fetch(`api/version?since=${since}`, { cache: 'no-store' })).json(); n = othersNew(x.ids || []).length; histNow = +String(x.v).split('-')[0] || histNow; } catch {}
+  hiNewSince = n ? since : Infinity; hiMine = histMine();  // เก็บไว้ไฮไลต์ก่อนล้างช่วงเก่า
+  try {
+    localStorage.setItem(histKey(), histNow);
+    localStorage.setItem(mineKey(), JSON.stringify(histMine().filter(([, b]) => b > histNow)));  // ช่วงที่เก่ากว่าที่ดูแล้ว ไม่ต้องจำ
+  } catch {}
+  setHistBadge(0);
+  $('#hiNew').hidden = !n; $('#hiNewTxt').textContent = `🔔 มี ${n} รายการใหม่ ตั้งแต่เปิดดูครั้งล่าสุด`;
+}
+$('#hiNewOk').onclick = () => { hiNewSince = Infinity; $('#hiNew').hidden = true; renderHistoryPage(); };
 document.addEventListener('visibilitychange', () => syncData(30000));
 function toLogin() { location.replace('/login'); return new Promise(() => {}); }
 let serverUser = null, loadedAt = 0, READONLY = false;  // READONLY = บัญชี viewer (ดูอย่างเดียว)  // มากับ /api/data — ไม่ต้องเรียก /api/me แยก (ลด 1 รอบ)
@@ -716,7 +758,7 @@ function show(tab, keep) {  // keep = วาดใหม่หลังดึง
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);  // จำเมนูไว้ในที่อยู่เว็บ → refresh แล้วอยู่เมนูเดิม
   ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: () => renderSummary(keep), history: renderHistory })[tab]();
 }
-$$('nav button').forEach(b => b.onclick = () => { show(b.dataset.tab); syncData(30000); });
+$$('nav button').forEach(b => b.onclick = async () => { if (b.dataset.tab === 'history' && curTab !== 'history') await openHistoryNew(); show(b.dataset.tab); syncData(30000); });
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
 $$('.mask:not(#askMask)').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) m.classList.remove('on'); }));
 document.addEventListener('keydown', e => {
@@ -1250,8 +1292,9 @@ function renderHistoryPage() {
   $('#hiPgPrev').disabled = hiPage <= 1; $('#hiPgNext').disabled = hiPage >= pages;
   $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
     const d = new Date(h.at * 1000), e = h.after || h.before;
-    return `<div class="hrow"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
-      <div class="a"><span class="act ${h.action}">${ACT[h.action]}</span></div>
+    const isNew = h.id > hiNewSince && !isMineHist(h.id, hiMine);
+    return `<div class="hrow${isNew ? ' new' : ''}"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
+      <div class="a"><span class="act ${h.action}">${ACT[h.action]}</span>${isNew ? '<span class="newtag">ใหม่</span>' : ''}</div>
       <div class="what">${describe(h.kind, e)}${h.action === 'update' ? `<div class="chg">${changesOf(h.kind, h.before, h.after) || 'ไม่มีการเปลี่ยนที่แสดงได้'}</div>` : ''}</div></div>`;
   }).join('')}</div>` : '<div class="empty">ยังไม่มีการทำรายการในเดือนนี้</div>';
 }
@@ -1507,7 +1550,10 @@ document.addEventListener('mousemove', ev => {
   await showUser();
   // มี #เมนู ในที่อยู่เว็บ (เช่น refresh) → เปิดเมนูนั้น · เปิดเว็บใหม่ → หน้า "วันนี้"
   const TABS = ['today', 'rooms', 'calendar', 'expenses', 'summary', 'history'], fromHash = location.hash.slice(1);
-  show(TABS.includes(fromHash) ? fromHash : db.rooms.length ? 'today' : 'rooms');
+  const first = TABS.includes(fromHash) ? fromHash : db.rooms.length ? 'today' : 'rooms';
+  if (first === 'history') await openHistoryNew();
+  show(first);
+  if (!READONLY && mode === 'server') syncData();  // ป้ายรายการประวัติใหม่ทันทีตอนเปิดเว็บ
 })();
 </script>
 </body>
