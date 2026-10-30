@@ -749,7 +749,11 @@ function show(tab, keep) {  // keep = วาดใหม่หลังดึง
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);  // จำเมนูไว้ในที่อยู่เว็บ → refresh แล้วอยู่เมนูเดิม
   ({ today: renderToday, rooms: renderRooms, calendar: renderCal, expenses: renderExCal, summary: () => renderSummary(keep), history: renderHistory })[tab]();
 }
-$$('nav button').forEach(b => b.onclick = async () => { if (b.dataset.tab === 'history' && curTab !== 'history') await openHistoryNew(); show(b.dataset.tab); syncData(30000); });
+$$('nav button').forEach(b => b.onclick = () => {
+  // ประวัติ: เปลี่ยนเมนูทันที แล้วค่อยเช็กรายการใหม่เบื้องหลัง (เสร็จแล้ววาดไฮไลต์ "ใหม่" ซ้ำ) — ไม่ต้องรอ API ก่อนกดติด
+  if (b.dataset.tab === 'history' && curTab !== 'history') { setHistBadge(0); openHistoryNew().then(() => hiRows.length && renderHistoryPage()); }
+  show(b.dataset.tab); syncData(30000);
+});
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('.mask').classList.remove('on'));
 $$('.mask:not(#askMask)').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) m.classList.remove('on'); }));
 document.addEventListener('keydown', e => {
