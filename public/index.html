@@ -122,9 +122,16 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 @media (max-width:560px){.kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:12px}.kpi .v{font-size:20px}.kpi .s{overflow-wrap:anywhere}}
 /* รายการหน้าวันนี้: ขึ้นบรรทัดใหม่ได้ แต่ไม่ตัดกลางคำ (เบอร์โทร, ช่องทาง, ออกวันถัดไป ฯลฯ อยู่ก้อนเดียว) */
 .titem .who .nw{display:inline-block}  /* ก้อนคำย้ายลงบรรทัดใหม่ทั้งก้อน · ถ้ายาวกว่าช่อง ค่อยตัดในก้อน (ไม่ล้นทับ) */
-.titem .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}.titem .side .stay{margin-left:0;white-space:nowrap}
-.titem .stay.narrow{display:none}
-@media (max-width:560px){.titem{gap:8px;padding:8px}.titem .stay{font-size:11px;padding:0 6px}.titem .stay.wide{display:none}.titem .stay.narrow{display:inline-block}}
+.titem .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.sbdg{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.titem .side .sbdg{margin-left:0}
+.sbd{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 3px;border-radius:99px;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.sbd.n{padding-right:8px}.sbd svg{width:22px;height:22px}
+.sbd.in{background:var(--accent-soft);color:var(--accent)}.sbd.co{background:color-mix(in srgb,var(--c2) 18%,transparent);color:var(--c2)}.sbd.out{background:var(--warn-soft);color:var(--warn)}
+.titem .sbdg.narrow{display:none}
+/* จอกว้าง: ชื่อกับป้ายรูปอยู่แนวเดียวกัน (กึ่งกลาง) ป้ายเล็กลงให้สูงไม่เกินบรรทัดชื่อ */
+.titem .who b:has(.sbdg){display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px}.titem .who b .sbdg{margin-left:0}.titem .who b .sbd{height:22px;font-size:12px}.titem .who b .sbd svg{width:18px;height:18px}
+.slegend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 16px 14px;font-size:12px;color:var(--muted)}.slegend>span{display:inline-flex;align-items:center;gap:5px}.slegend .sbd{height:22px}.slegend .sbd svg{width:18px;height:18px}
+@media (max-width:560px){.titem{gap:8px;padding:8px}.titem .sbdg.wide{display:none}.titem .sbdg.narrow{display:inline-flex}}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
 .charts .card{margin:0}
 .charts .grp{grid-column:1/-1;margin:10px 0 -4px;font-size:17px}
@@ -191,7 +198,7 @@ svg .grid{stroke:var(--line)}
 .card.focus{border:2px solid var(--accent);padding:0;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.07)}
 .card.focus .fhead{background:var(--accent-soft);padding:12px 16px;margin:0 0 12px}
 .card.focus h3{font-size:18px;color:var(--accent)}
-.card.focus .tlist{padding:0 16px 16px}
+.card.focus .tlist{padding:0 16px 10px}
 .fcount{background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px}
 .card.subtle{background:var(--other)}
 .card.subtle h3{font-size:14px;color:var(--muted)}
@@ -234,6 +241,9 @@ nav button{white-space:nowrap}
 <symbol id="rt-fan" viewBox="0 0 48 48"><rect x="22.5" y="26" width="3" height="14" fill="#9aa3a8"/><ellipse cx="24" cy="42" rx="9" ry="2.6" fill="#7d878c"/><circle cx="24" cy="18" r="14" fill="#fff" stroke="#9aa3a8" stroke-width="1.6"/><g fill="#1d9e75"><path d="M24 18C21 12 22 6.5 26 7c3 .5 2 6-2 11z"/><path d="M24 18c6.5-.5 11 3 9 6.5-1.5 2.7-6.5.3-9-6.5z"/><path d="M24 18c-3.5 5.5-8.5 7.5-10 4-1.2-2.8 3.5-5.8 10-4z"/></g><circle cx="24" cy="18" r="2.6" fill="#0f6e56"/><path d="M12 18h24M24 6v24" stroke="#c9d0d3" stroke-width=".6"/></symbol>
 <symbol id="rt-ac" viewBox="0 0 48 48"><rect x="4" y="9" width="40" height="15" rx="3.5" fill="#fff" stroke="#b8c0c4" stroke-width="1.2"/><rect x="7" y="18.5" width="34" height="3" rx="1.5" fill="#d7dde0"/><path d="M8 20h32" stroke="#9aa3a8" stroke-width=".8"/><circle cx="38" cy="13.5" r="1.3" fill="#3fbf6a"/><rect x="8" y="12.5" width="10" height="2" rx="1" fill="#e6eaec"/><g fill="none" stroke="#5aa7e0" stroke-width="1.8" stroke-linecap="round"><path d="M14 28c-1.5 2.5 1.5 4 0 6.5"/><path d="M24 28c-1.5 2.5 1.5 4 0 6.5s1.5 4 0 6.5"/><path d="M34 28c-1.5 2.5 1.5 4 0 6.5"/></g></symbol>
 <symbol id="rt-month" viewBox="0 0 48 48"><rect x="7" y="9" width="34" height="33" rx="4" fill="#fff" stroke="#d3c7b4" stroke-width="1"/><path d="M7 13a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v5H7z" fill="#e24b4a"/><rect x="14" y="5" width="3" height="8" rx="1.5" fill="#6b6b6b"/><rect x="31" y="5" width="3" height="8" rx="1.5" fill="#6b6b6b"/><g fill="#c9c1b4"><rect x="11" y="22" width="5" height="4" rx="1"/><rect x="19" y="22" width="5" height="4" rx="1"/><rect x="27" y="22" width="5" height="4" rx="1"/><rect x="11" y="29" width="5" height="4" rx="1"/><rect x="19" y="29" width="5" height="4" rx="1"/><rect x="11" y="36" width="5" height="3" rx="1"/></g><rect x="27" y="29" width="10" height="10" rx="2" fill="#ef9f27"/><path d="M29.5 34l2 2 3.5-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="st-key" viewBox="0 0 32 32"><circle cx="10" cy="12" r="6.5" fill="#e8b33c" stroke="#a87a17" stroke-width="1.2"/><circle cx="10" cy="12" r="2.4" fill="#fff8e0" stroke="#a87a17" stroke-width="1"/><path d="M15.5 14.5l10 8" stroke="#e8b33c" stroke-width="3.4" stroke-linecap="round"/><path d="M21.5 19.4l-1.6 2.4M24.3 21.6l-1.6 2.4" stroke="#a87a17" stroke-width="1.6" stroke-linecap="round"/><path d="M5 6.5l-2.5-3" stroke="#8a5a2b" stroke-width="1"/><rect x="0.5" y="0.5" width="5" height="4" rx="1" transform="rotate(-38 3 2.5)" fill="#d85a30"/></symbol>
+<symbol id="st-sleep" viewBox="0 0 32 32"><path d="M23.5 3.5a6 6 0 1 0 5 8.6 5 5 0 0 1-5-8.6z" fill="#f2c94c"/><rect x="2" y="17" width="28" height="7" rx="2" fill="#f4f1ea" stroke="#c9c1b4" stroke-width=".8"/><rect x="2" y="12" width="4" height="15" rx="1.5" fill="#9c6233"/><circle cx="10.5" cy="15.5" r="3.2" fill="#f2c9a0"/><path d="M7.3 15a3.2 3.2 0 0 1 6.4 0c-1.2-1.3-5.2-1.3-6.4 0z" fill="#3a2a22"/><path d="M12 18h18v4.5a2 2 0 0 1-2 2H12z" fill="#3b82c4"/><rect x="27" y="23" width="2.5" height="5" rx="1" fill="#7a4a24"/><path d="M14.5 6.5h3.5l-3.5 4h3.5M19 3h2.6l-2.6 3h2.6" fill="none" stroke="#5b8fd0" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="st-out" viewBox="0 0 32 32"><rect x="2" y="3" width="14" height="26" rx="1.5" fill="#9c6233"/><rect x="4" y="5" width="10" height="22" fill="#2b2b2b"/><path d="M4 5l7 2v22l-7-2z" fill="#cc6a2c"/><circle cx="21" cy="8" r="2.6" fill="#f2c9a0"/><path d="M21 11c-2 0-3 1.5-3 3.5V20l-2 7h2.2l2-5 1.8 5H24l-1.5-7v-4l2.5 3 1.5-1-3-4c-.6-1-1.4-1.5-2.5-1.5z" fill="#3b82c4"/><rect x="25" y="19" width="5.5" height="8" rx="1.2" fill="#d85a30"/><path d="M26.5 19v-1.6h2.5V19" fill="none" stroke="#993c1d" stroke-width="1"/><path d="M24 22l1.2-1" stroke="#2c5f8a" stroke-width="1"/></symbol>
 </svg>
 <header>
   <div class="bar">
@@ -268,7 +278,8 @@ nav button{white-space:nowrap}
     </div>
     <div class="kpis" id="tdKpis"></div>
     <div class="tday">
-      <div class="card focus"><div class="row fhead"><h3 id="tdInTitle" style="margin:0">🛏 เข้าพักคืนนี้</h3><div class="sp"></div><span class="fcount" id="tdInCount"></span></div><div class="tlist" id="tdIn"></div></div>
+      <div class="card focus"><div class="row fhead"><h3 id="tdInTitle" style="margin:0">🛏 เข้าพักคืนนี้</h3><div class="sp"></div><span class="fcount" id="tdInCount"></span></div><div class="tlist" id="tdIn"></div>
+        <div class="slegend"><span><span class="sbd in"><svg><use href="#st-key"/></svg></span>เช็คอิน</span><span><span class="sbd co n"><svg><use href="#st-sleep"/></svg>2/3</span>พักต่อ (คืนที่/ทั้งหมด)</span><span><span class="sbd out"><svg><use href="#st-out"/></svg></span>ออกวันถัดไป</span></div></div>
     </div>
     <div class="card subtle" style="margin-top:16px"><div class="row" style="margin-bottom:12px"><h3 style="margin:0">💸 ค้างชำระทั้งหมด</h3><div class="sp"></div><div id="tdDueSum" style="text-align:right"></div></div><div class="tlist" id="tdDue"></div></div>
   </section>
@@ -766,13 +777,15 @@ function renderToday() {
     const r = roomById(e.roomId), st = stayOf(e);
     // ป้าย: เช็คอินวันนี้ หรือ พักต่อ คืนที่ i/n (+ ออกพรุ่งนี้)
     const nth = st.nights.findIndex(n => n.date === key) + 1, isIn = nth === 1;
+    // ป้ายเป็นรูป (ชี้ค้าง = ข้อความเต็ม): เช็คอิน = กุญแจ · พักต่อ = แขกนอนหลับ + คืนที่/ทั้งหมด · ออกพรุ่งนี้ = คนลากกระเป๋าออกประตู
     // จอกว้าง: ป้ายต่อท้ายชื่อ · มือถือ: ป้ายอยู่มุมขวาบน (เหนือสถานะจ่ายเงิน)
-    const badge = w => isIn ? `<span class="stay in ${w}">🟢 ${isToday ? 'เช็คอินวันนี้' : 'เช็คอิน'}</span>`
-      : `<span class="stay cont ${w}">🔵 พักต่อ คืนที่ ${nth}/${st.nights.length}</span>`;
-    const leaving = st.out === addDays(key, 1) ? ` <span class="nw">· <b style="display:inline;color:var(--c2)">ออก${isToday ? 'พรุ่งนี้' : 'วันถัดไป'}</b></span>` : '';
+    const ico = id => `<svg><use href="#st-${id}"/></svg>`, out = st.out === addDays(key, 1);
+    const badge = w => `<span class="sbdg ${w}">${isIn ? `<span class="sbd in" title="${isToday ? 'เช็คอินวันนี้' : 'เช็คอิน'}">${ico('key')}</span>`
+      : `<span class="sbd co n" title="พักต่อ คืนที่ ${nth}/${st.nights.length}">${ico('sleep')}${nth}/${st.nights.length}</span>`}${out
+      ? `<span class="sbd out" title="ออก${isToday ? 'พรุ่งนี้' : 'วันถัดไป'}">${ico('out')}</span>` : ''}</span>`;
     return `<div class="titem">${roomTypeIcon(r?.type)}
       <div class="who"><b>ห้อง ${esc(r?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}${badge('wide')}</b>
-        <span>${baht(e.amount)}${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.channel ? ` <span class="nw">· ${esc(e.channel)}</span>` : ''}${leaving}${extra || ''}</span></div>
+        <span>${baht(e.amount)}${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.channel ? ` <span class="nw">· ${esc(e.channel)}</span>` : ''}${extra || ''}</span></div>
       <div class="side">${badge('narrow')}${paidTag([e])}</div></div>`;  // เฉพาะคืนนี้: ยอด/ช่องทาง/สถานะของคืนนี้ · ขวา: ป้ายเช็คอิน/พักต่อ บน สถานะจ่ายเงิน ล่าง
   };
   const empty = t => `<div class="empty" style="padding:12px">${t}</div>`;
