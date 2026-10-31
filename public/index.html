@@ -216,10 +216,12 @@ svg .grid{stroke:var(--line)}
 .modal .x{border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer}
 /* ดึงจอลงเพื่อ refresh (จอสัมผัส) · ปิดการดึงของเบราว์เซอร์ ไม่ให้ซ้อนกัน */
 @media (pointer:coarse){html{overscroll-behavior-y:contain}}
-.ptr{position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--panel);color:var(--muted);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;z-index:30;pointer-events:none;opacity:0;transform:translateY(-48px)}
-.ptr.back{transition:transform .2s,opacity .2s}.ptr.ready{color:var(--accent);border-color:var(--accent)}
-.ptr.spin i{animation:ptrSpin .8s linear infinite}.ptr i{display:block;font-style:normal}
-@keyframes ptrSpin{to{transform:rotate(360deg)}}
+.ptr{position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;z-index:30;pointer-events:none;opacity:0;transform:translateY(-48px)}
+.ptr.back{transition:transform .2s,opacity .2s}.ptr.ready{border-color:var(--accent)}
+.ptr svg{width:30px;height:30px;transform:rotate(-90deg)}.ptr circle{fill:none;stroke-width:3.5;stroke:var(--line)}
+.ptr .arc{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:81.7;stroke-dashoffset:81.7}
+.ptr.spin svg{animation:ptrSpin .8s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(270deg)}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
 .toast.on{opacity:1}
 .foot{color:var(--muted);font-size:12px;text-align:center;padding:8px 0 24px}
@@ -534,7 +536,7 @@ nav button{white-space:nowrap}
   </div>
 </div>
 
-<div class="ptr" id="ptr" aria-hidden="true"><i>↻</i></div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13"/><circle class="arc" cx="16" cy="16" r="13"/></svg></div>
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
 
@@ -778,11 +780,11 @@ $('#pwForm').onsubmit = async e => {
 };
 // ดึงจอลงจากบนสุดของหน้า แล้วปล่อยเมื่อถึงระยะ → โหลดหน้าใหม่ (ได้ข้อมูลและเวอร์ชันล่าสุด) · ไม่ทำงานตอนเปิดหน้าต่างกรอกข้อมูล
 (() => {
-  const READY = 70, MAX = 100, el = $('#ptr'), icon = el.firstElementChild;
+  const READY = 110, MAX = 140, el = $('#ptr'), arc = el.querySelector('.arc');
   let y0 = null, x0 = 0, pull = 0;
   const place = () => {
     el.style.transform = `translateY(${pull - 48}px)`; el.style.opacity = Math.min(pull / READY, 1);
-    icon.style.transform = `rotate(${pull * 4}deg)`; el.classList.toggle('ready', pull >= READY);
+    arc.style.strokeDashoffset = 81.7 * (1 - Math.min(pull / READY, 1)); el.classList.toggle('ready', pull >= READY);
   };
   const reset = () => { y0 = null; pull = 0; el.classList.add('back'); el.style.transform = ''; el.style.opacity = ''; el.classList.remove('ready'); };
   addEventListener('touchstart', e => {
@@ -800,7 +802,7 @@ $('#pwForm').onsubmit = async e => {
   addEventListener('touchend', async () => {
     if (y0 === null) return;
     if (pull < READY) return reset();
-    y0 = null; el.classList.add('back', 'spin'); pull = 60; place(); icon.style.transform = '';
+    y0 = null; el.classList.add('back', 'spin'); pull = 60; place();
     try { await saving; } catch {}
     location.reload();
   });
