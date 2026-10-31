@@ -13,9 +13,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บ้านริมภู">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- โหมดสว่าง/มืด: ตั้งต้นตามเครื่อง (OS) · เลือกเองที่ปุ่ม ☀/🌙 แล้วจำในเครื่อง — ตั้งก่อนวาดหน้า กันกระพริบ -->
+<script>(() => {
+  const k = 'brp-theme', os = matchMedia('(prefers-color-scheme: dark)');
+  let t = null; try { t = localStorage.getItem(k); } catch {}
+  const set = () => { document.documentElement.dataset.theme = t || (os.matches ? 'dark' : 'light'); };
+  set(); os.addEventListener('change', () => { if (!t) set(); });
+  window.setTheme = v => { t = v; try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} set(); };
+  window.osTheme = () => os.matches ? 'dark' : 'light';
+})();</script>
 <style>
 :root{--bg:#f6f4ef;--panel:#fff;--ink:#1f2a24;--muted:#6b756f;--line:#e3e0d8;--accent:#2f6b4f;--accent-soft:#e3efe8;--danger:#b3261e;--danger-soft:#fbe3e1}
-@media (prefers-color-scheme: dark){:root{--bg:#141816;--panel:#1d2320;--ink:#e6ebe8;--muted:#97a39c;--line:#2f3733;--accent:#6cc39a;--accent-soft:#22362c;--danger:#ef7a72;--danger-soft:#3d2321}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#141816;--panel:#1d2320;--ink:#e6ebe8;--muted:#97a39c;--line:#2f3733;--accent:#6cc39a;--accent-soft:#22362c;--danger:#ef7a72;--danger-soft:#3d2321}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:flex-end;padding:16px 8vw;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
@@ -56,7 +65,7 @@ button:disabled{opacity:.6;cursor:default}
   <button id="btn">เข้าสู่ระบบ</button>
   <div class="err" id="err"></div>
 </form>
-<script src="/scene.js?v=16" defer></script>
+<script src="/scene.js?v=17" defer></script>
 <script>
 // มีรูปจริง (photo.jpg) → ใช้แทนภาพวาด
 { const im = new Image(); im.onload = () => { const bg = document.getElementById('bg'); bg.innerHTML = ''; bg.className = 'bg photo'; bg.style.backgroundImage = 'url(/photo.jpg)'; }; im.src = '/photo.jpg'; }

@@ -13,6 +13,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="บ้านริมภู">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- โหมดสว่าง/มืด: ตั้งต้นตามเครื่อง (OS) · เลือกเองที่ปุ่ม ☀/🌙 แล้วจำในเครื่อง — ตั้งก่อนวาดหน้า กันกระพริบ -->
+<script>(() => {
+  const k = 'brp-theme', os = matchMedia('(prefers-color-scheme: dark)');
+  let t = null; try { t = localStorage.getItem(k); } catch {}
+  const set = () => { document.documentElement.dataset.theme = t || (os.matches ? 'dark' : 'light'); };
+  set(); os.addEventListener('change', () => { if (!t) set(); });
+  window.setTheme = v => { t = v; try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} set(); };
+  window.osTheme = () => os.matches ? 'dark' : 'light';
+})();</script>
 <style>
 :root{
   --bg:#f6f4ef; --panel:#fff; --ink:#1f2a24; --muted:#6b756f; --line:#e3e0d8;
@@ -20,14 +29,13 @@
   --danger:#b3261e; --danger-soft:#fbe3e1; --today:#fff7d6; --other:#faf9f6;
   --c1:#2f6b4f; --c2:#4f8fc0; --c3:#d08a3b; --c4:#9a5fb5; --c5:#8d6a46; --c6:#3f9a92; --c7:#5b67c2; --c8:#7f8a2a;
 }
-@media (prefers-color-scheme: dark){
-  :root{
+:root[data-theme="dark"]{color-scheme:dark;
     --bg:#141816; --panel:#1d2320; --ink:#e6ebe8; --muted:#97a39c; --line:#2f3733;
     --accent:#6cc39a; --accent-soft:#22362c; --on-accent:#0f2a1c; --cal-head:#2b3445; --cal-head-ink:#b9c6dc; --warn:#e6a54a; --warn-soft:#3a2e1c; --dep:#f5d05a; --dep-soft:#3a3315; --dep-ink:#f5d05a;
     --danger:#ef7a72; --danger-soft:#3d2321; --today:#33301f; --other:#191e1b;
     --c1:#6cc39a; --c2:#7ab3e0; --c3:#e6a65c; --c4:#bf8fd6; --c5:#c49a6c; --c6:#6fc4bb; --c7:#8f99e6; --c8:#b6c25a;
-  }
 }
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 /* viewer (ดูอย่างเดียว): ซ่อนเมนูและทุกปุ่ม/ฟอร์มที่เพิ่ม แก้ไข ลบ */
@@ -61,6 +69,10 @@ header{background:var(--panel);border-bottom:1px solid var(--line);position:stic
 /* ปุ่มบัญชีมุมขวาบน (ตัวอักษรแรกของชื่อ) → เมนูเล็ก: ชื่อ · เปลี่ยนรหัสผ่าน · ออกจากระบบ */
 .userbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font:inherit;font-weight:700;font-size:15px;cursor:pointer;padding:0}
 .userbtn:hover,.userbtn[aria-expanded="true"]{border-color:var(--accent)}
+/* ปุ่มสลับโหมด: โหมดสว่างโชว์พระอาทิตย์ · โหมดมืดโชว์พระจันทร์ (กดแล้วสลับ) */
+.themebtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.themebtn:hover{border-color:var(--accent)}.themebtn svg{width:20px;height:20px}
+[data-theme="dark"] .themebtn .sun,:root:not([data-theme="dark"]) .themebtn .moon{display:none}
 .usermenu{position:absolute;right:0;top:calc(100% + 6px);min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;z-index:40;display:flex;flex-direction:column}
 .usermenu .uname{padding:8px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;white-space:nowrap}
 .usermenu button{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
@@ -221,7 +233,7 @@ svg .grid{stroke:var(--line)}
 .rtype{width:36px;height:36px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;background:#f1efe8}
 .rtype svg{width:30px;height:30px}
 .rt-single{background:#e6f1fb}.rt-double{background:#fbeaf0}.rt-family{background:#eaf3de}.rt-fan{background:#e1f5ee}.rt-ac{background:#eeedfe}.rt-month{background:#faeeda}
-@media (prefers-color-scheme: dark){.rtype{background:#2c2c2a}.rt-single{background:#0c447c}.rt-double{background:#72243e}.rt-family{background:#27500a}.rt-fan{background:#085041}.rt-ac{background:#3c3489}.rt-month{background:#633806}}
+[data-theme="dark"] .rtype{background:#2c2c2a}[data-theme="dark"] .rt-single{background:#0c447c}[data-theme="dark"] .rt-double{background:#72243e}[data-theme="dark"] .rt-family{background:#27500a}[data-theme="dark"] .rt-fan{background:#085041}[data-theme="dark"] .rt-ac{background:#3c3489}[data-theme="dark"] .rt-month{background:#633806}
 .stay{display:inline-block;margin-left:6px;padding:0 8px;border-radius:99px;font-size:11.5px;font-weight:700;vertical-align:1px}
 .stay.in{background:var(--accent-soft);color:var(--accent)}
 .stay.cont{background:color-mix(in srgb,var(--c2) 18%,transparent);color:var(--c2)}
@@ -271,11 +283,13 @@ nav button{white-space:nowrap}
       <button data-tab="history"><span class="nico">🕘<span class="nbadge" id="hiBadge" hidden></span></span> ประวัติ</button>
     </nav>
     <div class="user" id="userBox" hidden>
+      <button class="themebtn" id="themeBtn" type="button"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="#f2b632"/><g stroke="#f2b632" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.2a8.8 8.8 0 1 0 5.3 13.2A7 7 0 0 1 15.5 3.2z" fill="#f2d16b"/><circle cx="6" cy="6" r=".9" fill="#f2d16b"/><circle cx="19" cy="4.5" r=".7" fill="#f2d16b"/></svg></button>
       <div class="uinfo" id="userInfo"></div>
       <button class="userbtn" id="userBtn" aria-haspopup="menu" aria-expanded="false" title="บัญชีผู้ใช้"></button>
       <div class="usermenu" id="userMenu" role="menu" hidden>
         <div class="uname" id="userName"></div>
         <button id="btnPw" role="menuitem">🔑 เปลี่ยนรหัสผ่าน</button>
+        <button id="btnAppBadge" role="menuitem" hidden>🔔 เปิดตัวเลขบนไอคอน</button>
         <button id="btnLogout" role="menuitem">🚪 ออกจากระบบ</button>
       </div>
     </div>
@@ -496,7 +510,7 @@ nav button{white-space:nowrap}
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
 
-<script src="scene.js?v=16" defer></script>
+<script src="scene.js?v=17" defer></script>
 <script>
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -656,7 +670,21 @@ function histSeen() {
   if (v === null) { v = histNow; try { localStorage.setItem(histKey(), v); } catch {} }  // ครั้งแรกในเครื่องนี้: เริ่มนับจากตอนนี้
   return +v || 0;
 }
-function setHistBadge(n) { const b = $('#hiBadge'); b.hidden = !(n > 0); b.textContent = n > 99 ? '99+' : n; }
+function setHistBadge(n) {
+  const b = $('#hiBadge'); b.hidden = !(n > 0); b.textContent = n > 99 ? '99+' : n;
+  // ตัวเลขบนไอคอนแอป (ติดตั้งบนหน้าจอโฮม/คอม): อัปเดตเฉพาะตอนแอปเปิดอยู่ · iPhone ต้องอนุญาตการแจ้งเตือนก่อน (ปุ่มในเมนูบัญชี)
+  if ('setAppBadge' in navigator) (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+}
+// ปุ่ม "เปิดตัวเลขบนไอคอน": แสดงเมื่อเปิดจากไอคอนบนหน้าจอโฮม (แบบแอป) และยังไม่เคยตอบการขออนุญาต — iPhone ต้องกดเองถึงขอได้
+const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function syncAppBadgeBtn() {
+  $('#btnAppBadge').hidden = READONLY || !isApp() || !('setAppBadge' in navigator) || !('Notification' in window) || Notification.permission !== 'default';
+}
+$('#btnAppBadge').onclick = async () => {
+  const r = await Notification.requestPermission().catch(() => 'denied');
+  toast(r === 'granted' ? 'เปิดตัวเลขบนไอคอนแล้ว' : 'ไม่ได้อนุญาต — เปิดได้ที่ การตั้งค่า → การแจ้งเตือน → บ้านริมภู');
+  syncAppBadgeBtn(); checkedAt = 0; syncData();
+};
 // เปิดเมนูประวัติ: จำจุดเริ่มของ "ใหม่" ไว้ไฮไลต์ แล้วถือว่าดูแล้ว (ป้ายที่เมนูหาย)
 async function openHistoryNew() {
   if (READONLY || mode !== 'server') return;
@@ -687,6 +715,18 @@ async function showUser() {
   } catch {}
 }
 // เปิด/ปิดเมนูบัญชี · กดที่อื่นหรือ Esc = ปิด · เลือกเมนูแล้วปิดเอง
+// สลับโหมดสว่าง/มืด: เลือกตรงกับเครื่อง = กลับไปตามเครื่อง (ไม่จำ) · ต่างจากเครื่อง = จำไว้ในเครื่องนี้
+function syncThemeBtn() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  $('#themeBtn').title = dark ? 'โหมดมืด — กดเพื่อเปลี่ยนเป็นโหมดสว่าง' : 'โหมดสว่าง — กดเพื่อเปลี่ยนเป็นโหมดมืด';
+  $('#themeBtn').setAttribute('aria-label', $('#themeBtn').title);
+}
+$('#themeBtn').onclick = () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  setTheme(next === osTheme() ? null : next); syncThemeBtn();
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(syncThemeBtn));
+syncThemeBtn();
 const userMenu = open => { $('#userMenu').hidden = !open; $('#userBtn').setAttribute('aria-expanded', String(open)); };
 $('#userBtn').onclick = e => { e.stopPropagation(); userMenu($('#userMenu').hidden); };
 document.addEventListener('click', e => { if (!e.target.closest('#userBox')) userMenu(false); });
@@ -1549,6 +1589,7 @@ document.addEventListener('mousemove', ev => {
   if (first === 'history') await openHistoryNew();
   show(first);
   if (!READONLY && mode === 'server') syncData();  // ป้ายรายการประวัติใหม่ทันทีตอนเปิดเว็บ
+  syncAppBadgeBtn();
 })();
 </script>
 </body>

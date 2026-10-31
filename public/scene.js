@@ -10,14 +10,12 @@
        --bLouver:#f4f5f5;--bLouverLn:#d3d7d9;--bWall:#e2e4e5;--bWall2:#eef0f0;--bPlinth:#a8afb3;--bPillar:#8f979d;
        --bFrame:#3a4045;--bCurtain:#a9cdb0;--bDoor:#cc6a2c;--bDoorLn:#a9521d;--bRail:#2b3034;--bStep:#c98b59;--bStepDk:#a86e43;
        --bConcrete:#d3d6d8;--bConcreteDk:#b7bcbf}
-  @media (prefers-color-scheme: dark){
-    .scn{--sky1:#26314f;--sky2:#0e1426;--sun:#f4f1de;--m1:#34425e;--m2:#2a3a4c;--m3:#22383a;--hill:#1f3a2b;--field:#172d21;
+  [data-theme="dark"] .scn{--sky1:#26314f;--sky2:#0e1426;--sun:#f4f1de;--m1:#34425e;--m2:#2a3a4c;--m3:#22383a;--hill:#1f3a2b;--field:#172d21;
          --tree:#12291d;--tree2:#1d3f2b;--wood:#4a2e1b;--win:#ffc24d;--cloud:#8592b3;--star:1;--glow:.8;--lamp:.9;
          --bFascia:#4d555b;--bFasciaHi:#69737a;--bOrange:#9a5a25;--bOrangeDk:#7c461a;--bRoof:#55321f;--bTrim:#6d767c;
          --bLouver:#9da3a7;--bLouverLn:#828a8f;--bWall:#8c9296;--bWall2:#979da1;--bPlinth:#5f666b;--bPillar:#565e64;
          --bFrame:#22272b;--bCurtain:#ffcf6e;--bDoor:#8f4a1f;--bDoorLn:#723a17;--bRail:#16191c;--bStep:#87603f;--bStepDk:#6d4c31;
          --bConcrete:#6a7074;--bConcreteDk:#575d61}
-  }
   .scn svg{display:block;width:100%;height:100%}
   .scn .cloud{animation:brpDrift 70s linear infinite}
   .scn .cloud.c2{animation-duration:100s;animation-delay:-45s}
@@ -38,7 +36,7 @@
   .scn .smoke{animation:brpSmoke 5s ease-out infinite;opacity:0}
   .scn .nod{animation:brpNod 5s ease-in-out infinite}
   .scn .bubble{animation:brpBubble 9s ease-in-out infinite}
-  @media (prefers-color-scheme: dark){.scn .ppl,.scn .dog{filter:brightness(.85)}}
+  [data-theme="dark"] .scn .ppl,[data-theme="dark"] .scn .dog{filter:brightness(.85)}
   @keyframes brpDrift{from{transform:translateX(-300px)}to{transform:translateX(1700px)}}
   @keyframes brpTwinkle{50%{opacity:.15}}
   @keyframes brpPuff{from{transform:translateY(-3px)}to{transform:translateY(3px)}}
