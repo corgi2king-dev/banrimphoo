@@ -214,6 +214,12 @@ svg .grid{stroke:var(--line)}
 .mask.on{display:flex}
 .modal{background:var(--panel);border-radius:14px;width:100%;max-width:560px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
 .modal .x{border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer}
+/* ดึงจอลงเพื่อ refresh (จอสัมผัส) · ปิดการดึงของเบราว์เซอร์ ไม่ให้ซ้อนกัน */
+@media (pointer:coarse){html{overscroll-behavior-y:contain}}
+.ptr{position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--panel);color:var(--muted);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;z-index:30;pointer-events:none;opacity:0;transform:translateY(-48px)}
+.ptr.back{transition:transform .2s,opacity .2s}.ptr.ready{color:var(--accent);border-color:var(--accent)}
+.ptr.spin i{animation:ptrSpin .8s linear infinite}.ptr i{display:block;font-style:normal}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
 .toast.on{opacity:1}
 .foot{color:var(--muted);font-size:12px;text-align:center;padding:8px 0 24px}
@@ -528,6 +534,7 @@ nav button{white-space:nowrap}
   </div>
 </div>
 
+<div class="ptr" id="ptr" aria-hidden="true"><i>↻</i></div>
 <div class="toast" id="toast"></div>
 <div class="tip" id="tip"></div>
 
@@ -769,6 +776,36 @@ $('#pwForm').onsubmit = async e => {
   if (!r.ok) return $('#pwErr').textContent = j.error;
   $('#pwMask').classList.remove('on'); toast('เปลี่ยนรหัสผ่านแล้ว');
 };
+// ดึงจอลงจากบนสุดของหน้า แล้วปล่อยเมื่อถึงระยะ → โหลดหน้าใหม่ (ได้ข้อมูลและเวอร์ชันล่าสุด) · ไม่ทำงานตอนเปิดหน้าต่างกรอกข้อมูล
+(() => {
+  const READY = 70, MAX = 100, el = $('#ptr'), icon = el.firstElementChild;
+  let y0 = null, x0 = 0, pull = 0;
+  const place = () => {
+    el.style.transform = `translateY(${pull - 48}px)`; el.style.opacity = Math.min(pull / READY, 1);
+    icon.style.transform = `rotate(${pull * 4}deg)`; el.classList.toggle('ready', pull >= READY);
+  };
+  const reset = () => { y0 = null; pull = 0; el.classList.add('back'); el.style.transform = ''; el.style.opacity = ''; el.classList.remove('ready'); };
+  addEventListener('touchstart', e => {
+    y0 = null;
+    if (e.touches.length !== 1 || scrollY > 0 || $$('.mask.on').length || e.target.closest('input,textarea,select')) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; pull = 0; el.classList.remove('back');
+  }, { passive: true });
+  addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    const dy = e.touches[0].clientY - y0, dx = e.touches[0].clientX - x0;
+    if (e.touches.length !== 1 || scrollY > 0 || dy <= 0 || (!pull && Math.abs(dx) > dy)) { if (pull) reset(); else y0 = null; return; }  // เลื่อนแนวนอน/เลื่อนขึ้น = ไม่ใช่การดึง
+    if (e.cancelable) e.preventDefault();
+    pull = Math.min(dy * .5, MAX); place();
+  }, { passive: false });
+  addEventListener('touchend', async () => {
+    if (y0 === null) return;
+    if (pull < READY) return reset();
+    y0 = null; el.classList.add('back', 'spin'); pull = 60; place(); icon.style.transform = '';
+    try { await saving; } catch {}
+    location.reload();
+  });
+  addEventListener('touchcancel', () => { if (y0 !== null) reset(); });
+})();
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2600); }
 
 const roomById = id => db.rooms.find(r => r.id === id);
