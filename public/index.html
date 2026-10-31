@@ -158,25 +158,32 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
 .charts .card{margin:0}
 .charts .grp{grid-column:1/-1;margin:10px 0 -4px;font-size:17px}
-.hist{display:flex;flex-direction:column}
-.hrow{display:grid;grid-template-columns:92px 74px 1fr;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:start;font-size:14px}
-.hrow.new{background:var(--accent-soft);border-radius:8px}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hday{font-size:14px;font-weight:700;color:var(--ink);background:var(--accent-soft);border-radius:8px;padding:6px 12px;margin-top:8px}
+.hday:first-child{margin-top:0}
+.hday small{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
+/* แถบสีซ้าย = ประเภทการทำ (เพิ่ม/แก้ไข/ลบ) */
+.hrow{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:9px 12px;font-size:14px;background:var(--panel)}
+.hrow.create{border-left-color:var(--accent)}.hrow.update{border-left-color:var(--dep)}.hrow.delete{border-left-color:var(--danger)}
+.hrow.new{background:var(--accent-soft)}
+.hrow .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hrow .who{margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hrow .sub{font-size:13px;color:var(--muted);margin-top:3px}
 .newtag{display:inline-block;margin-left:6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:0 7px;border-radius:99px;vertical-align:1px}
 /* ป้ายจำนวนรายการใหม่: วางทับไอคอนนาฬิกาด้านซ้ายของเมนู (ยังอยู่ในขอบปุ่ม → ไม่ถูกแถบเมนูตัด) */
 .nico{position:relative;display:inline-block}
 .nbadge{position:absolute;top:-7px;left:-9px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;box-sizing:border-box;box-shadow:0 0 0 2px var(--panel)}
 .hinew{display:flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:8px 10px;margin-bottom:10px;font-size:14px}
 .hrow .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
-.hrow .t b{display:block;color:var(--ink);font-size:13px}
-.hrow .what b{font-weight:600}
-.hrow .chg{font-size:12.5px;color:var(--muted);margin-top:3px}
+.hrow .top b{font-weight:600}
+.hrow .chg{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.hrow .chg span{background:var(--other);border-radius:6px;padding:2px 8px}
 .hrow .chg s{color:var(--danger);text-decoration:line-through}
 .hrow .chg ins{color:var(--accent);text-decoration:none;font-weight:600}
 .act{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;text-align:center}
 .act.create{background:var(--accent-soft);color:var(--accent)}
 .act.update{background:var(--dep-soft);color:var(--dep-ink)}
 .act.delete{background:var(--danger-soft);color:var(--danger)}
-@media (max-width:640px){.hrow{grid-template-columns:70px 1fr}.hrow .a{grid-column:2;grid-row:1}.hrow .what{grid-column:1/-1}}
 .mtable td,.mtable th{padding:7px 8px}
 .mtable tbody tr{cursor:pointer}
 .mtable tbody tr:hover{background:var(--bg)}
@@ -1326,17 +1333,17 @@ const payText = e => e.paid ? 'ชำระแล้ว' : +e.deposit > 0 ? `ม
 const roomName = id => roomById(id)?.name ?? '(ห้องที่ลบแล้ว)';
 const fieldVal = (k, e) => k === 'roomId' ? `ห้อง ${roomName(e.roomId)}` : k === 'amount' ? baht(e.amount)
   : k === 'date' ? shortTh(e.date) : (e[k] || '-');
-function describe(kind, e) {
-  return kind === 'entries'
-    ? `<b>🛏 ห้อง ${esc(roomName(e.roomId))}</b> · ${esc(e.guest || 'ไม่ระบุชื่อ')} · คืน ${shortTh(e.date)} · ${baht(e.amount)} · ${payText(e)}`
-    : `<b>🧾 ${esc(e.cat)}</b> · ${baht(e.amount)} · ${shortTh(e.date)}${e.note ? ' · ' + esc(e.note) : ''}`;
-}
+// หัวรายการ (ตัวหนา) กับรายละเอียด (บรรทัดรอง) แยกกัน อ่านง่ายกว่าเรียงต่อกันยาว ๆ
+const hiTitleOf = (kind, e) => kind === 'entries' ? `<b>🛏 ห้อง ${esc(roomName(e.roomId))} · ${esc(e.guest || 'ไม่ระบุชื่อ')}</b>` : `<b>🧾 ${esc(e.cat)}</b>`;
+const hiSubOf = (kind, e) => kind === 'entries'
+  ? `คืน ${shortTh(e.date)} · ${baht(e.amount)} · ${payText(e)}`
+  : `${shortTh(e.date)} · ${baht(e.amount)}${e.note ? ' · ' + esc(e.note) : ''}`;
 function changesOf(kind, b, a) {
   const keys = kind === 'entries' ? ['date', 'roomId', 'guest', 'phone', 'amount', 'channel', 'note'] : ['date', 'cat', 'amount', 'channel', 'note'];
   const out = keys.filter(k => String(b[k] ?? '') !== String(a[k] ?? ''))
-    .map(k => `${FIELD[k]}: <s>${esc(fieldVal(k, b))}</s> → <ins>${esc(fieldVal(k, a))}</ins>`);
-  if (kind === 'entries' && payText(b) !== payText(a)) out.push(`สถานะ: <s>${esc(payText(b))}</s> → <ins>${esc(payText(a))}</ins>`);
-  return out.join(' · ');
+    .map(k => `<span>${FIELD[k]}: <s>${esc(fieldVal(k, b))}</s> → <ins>${esc(fieldVal(k, a))}</ins></span>`);
+  if (kind === 'entries' && payText(b) !== payText(a)) out.push(`<span>สถานะ: <s>${esc(payText(b))}</s> → <ins>${esc(payText(a))}</ins></span>`);
+  return out.join('');
 }
 // แบ่งหน้า: แสดงหน้าละ HI_PER แถว · ดึงจากเซิร์ฟเวอร์ทีละ HI_BATCH แถว (ดึงเพิ่มเมื่อเลื่อนเกินที่มี)
 // เปลี่ยนเดือน/ตัวกรอง = ล้างแล้วเริ่มหน้า 1 ใหม่ · ตัวกรองทำที่เซิร์ฟเวอร์ (จำนวนรวม/จำนวนหน้าถูกต้อง)
@@ -1375,13 +1382,22 @@ function renderHistoryPage() {
   $('#hiPager').hidden = hiTotal <= HI_PER;
   $('#hiPgInfo').textContent = `หน้า ${hiPage} / ${pages} · ${hiTotal} รายการ`;
   $('#hiPgPrev').disabled = hiPage <= 1; $('#hiPgNext').disabled = hiPage >= pages;
+  let lastDay = '';
   $('#hiList').innerHTML = list.length ? `<div class="hist">${list.map(h => {
-    const d = new Date(h.at * 1000), e = h.after || h.before;
+    const d = new Date(h.at * 1000), e = h.after || h.before, day = ymd(d);
     const isNew = h.id > hiNewSince && h.user !== serverUser;
-    return `<div class="hrow${isNew ? ' new' : ''}"><div class="t"><b>${d.getDate()} ${TH_MON[d.getMonth()]}</b>${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</div>
-      <div class="a"><span class="act ${h.action}">${ACT[h.action]}</span>${isNew ? '<span class="newtag">ใหม่</span>' : ''}</div>
-      <div class="what">${describe(h.kind, e)}${h.action === 'update' ? `<div class="chg">${changesOf(h.kind, h.before, h.after) || 'ไม่มีการเปลี่ยนที่แสดงได้'}</div>` : ''}</div></div>`;
+    const head = day === lastDay ? '' : `<div class="hday">${hiDayLabel(d)}</div>`;  // ขึ้นวันใหม่ → หัวกลุ่มวันที่
+    lastDay = day;
+    return `${head}<div class="hrow ${h.action}${isNew ? ' new' : ''}">
+      <div class="top"><span class="act ${h.action}">${ACT[h.action]}</span>${hiTitleOf(h.kind, e)}${isNew ? '<span class="newtag">ใหม่</span>' : ''}<span class="who">${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.user || '-')}</span></div>
+      <div class="sub">${hiSubOf(h.kind, e)}</div>
+      ${h.action === 'update' ? `<div class="chg">${changesOf(h.kind, h.before, h.after) || '<span>ไม่มีการเปลี่ยนที่แสดงได้</span>'}</div>` : ''}</div>`;
   }).join('')}</div>` : '<div class="empty">ยังไม่มีการทำรายการในเดือนนี้</div>';
+}
+function hiDayLabel(d) {
+  const now = new Date(), diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  const date = `${d.getDate()} ${TH_MON[d.getMonth()]}`;
+  return diff === 0 ? `วันนี้<small>${date}</small>` : diff === 1 ? `เมื่อวาน<small>${date}</small>` : `${TH_DOW[d.getDay()]}. ${date}`;
 }
 $('#hiPrev').onclick = () => { if (--hiM < 0) { hiM = 11; hiY--; } renderHistory(); };
 $('#hiNext').onclick = () => { if (++hiM > 11) { hiM = 0; hiY++; } renderHistory(); };
