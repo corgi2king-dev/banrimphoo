@@ -90,6 +90,6 @@ describe('summary', () => {
   it('ไม่มีห้องเปิดเลย ใช้จำนวนห้องทั้งหมด', () => expect(computeSummary({ ...db, rooms: [{ id: 'r', name: 'r', status: 'closed' }] }, 2026, 10).openRooms).toBe(1));
 });
 describe('version', () => {
-  it('เลขรอบ, commit และวันที่เวลาไทย', () => expect(versionText({ version: '12', commit: 'a58e086abcdef', time: '2026-11-01T18:30:00Z' })).toBe('เวอร์ชัน 12 · a58e086 · 2 พ.ย. 2569'));
-  it('build ในเครื่องไม่มีเลขรอบ', () => expect(versionText({ version: undefined, commit: undefined, time: undefined })).toBe('เวอร์ชันทดสอบในเครื่อง'));
+  it('เลขรอบและวันที่เวลาไทย', () => expect(versionText({ version: '12', time: '2026-11-01T18:30:00Z' })).toBe('เวอร์ชัน 12 · 2 พ.ย. 2569'));
+  it('build ในเครื่องไม่มีเลขรอบ', () => expect(versionText({ version: undefined, time: undefined })).toBe('เวอร์ชันทดสอบในเครื่อง'));
 });
