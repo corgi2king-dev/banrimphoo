@@ -1,0 +1,262 @@
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1f2a24; --muted:#6b756f; --line:#e3e0d8;
+  --accent:#2f6b4f; --accent-soft:#e3efe8; --on-accent:#fff; --cal-head:#e8eef7; --cal-head-ink:#4a5b78; --warn:#b26a00; --warn-soft:#fbefdc; --dep:#f2c230; --dep-soft:#fff5c7; --dep-ink:#7a5c00;
+  --danger:#b3261e; --danger-soft:#fbe3e1; --today:#fff7d6; --other:#faf9f6;
+  --c1:#2f6b4f; --c2:#4f8fc0; --c3:#d08a3b; --c4:#9a5fb5; --c5:#8d6a46; --c6:#3f9a92; --c7:#5b67c2; --c8:#7f8a2a;
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --bg:#141816; --panel:#1d2320; --ink:#e6ebe8; --muted:#97a39c; --line:#2f3733;
+    --accent:#6cc39a; --accent-soft:#22362c; --on-accent:#0f2a1c; --cal-head:#2b3445; --cal-head-ink:#b9c6dc; --warn:#e6a54a; --warn-soft:#3a2e1c; --dep:#f5d05a; --dep-soft:#3a3315; --dep-ink:#f5d05a;
+    --danger:#ef7a72; --danger-soft:#3d2321; --today:#33301f; --other:#191e1b;
+    --c1:#6cc39a; --c2:#7ab3e0; --c3:#e6a65c; --c4:#bf8fd6; --c5:#c49a6c; --c6:#6fc4bb; --c7:#8f99e6; --c8:#b6c25a;
+}
+:root[data-theme="light"]{color-scheme:light}
+/* พื้นหลังหลังสุดของเว็บ: ด้านบน พระอาทิตย์+เมฆ / พระจันทร์+ดาว · ด้านล่าง ทิวเขาจาง ๆ · ไล่สีอ่อน (ตรึงกับจอ ไม่เลื่อนตามหน้า) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320' preserveAspectRatio='xMidYMin slice'%3E%3Ccircle cx='860' cy='150' r='70' fill='%23f6e9b8' opacity='.55'/%3E%3Ccircle cx='860' cy='150' r='42' fill='%23f4dc8a'/%3E%3Cg transform='translate(610 175) scale(1)' fill='%23ffffff'%3E%3Cellipse cx='0' cy='0' rx='70' ry='20'/%3E%3Cellipse cx='-28' cy='-13' rx='32' ry='22'/%3E%3Cellipse cx='22' cy='-18' rx='38' ry='28'/%3E%3C/g%3E%3Cg transform='translate(1120 135) scale(1.15)' fill='%23ffffff'%3E%3Cellipse cx='0' cy='0' rx='70' ry='20'/%3E%3Cellipse cx='-28' cy='-13' rx='32' ry='22'/%3E%3Cellipse cx='22' cy='-18' rx='38' ry='28'/%3E%3C/g%3E%3Cg transform='translate(240 155) scale(0.9)' fill='%23ffffff'%3E%3Cellipse cx='0' cy='0' rx='70' ry='20'/%3E%3Cellipse cx='-28' cy='-13' rx='32' ry='22'/%3E%3Cellipse cx='22' cy='-18' rx='38' ry='28'/%3E%3C/g%3E%3C/svg%3E") top/100% 40vh no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 400' preserveAspectRatio='xMidYMax slice'%3E%3Cpath d='M0 210L180 120L340 190L540 70L720 180L900 95L1100 195L1280 110L1440 170V400H0Z' fill='%23d9e2d3'/%3E%3Cg fill='%23a5bda2'%3E%3Cpath d='M120 131l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M175 105.0l16.2 25.0h-7.5l12.5 20.0h-10.0l12.5 20.0h-47.5l12.5 -20.0h-10.0l12.5 -20.0h-7.5z'/%3E%3Cpath d='M250 145.4l11.7 18.0h-5.4l9.0 14.4h-7.2l9.0 14.4h-34.2l9.0 -14.4h-7.2l9.0 -14.4h-5.4z'/%3E%3Cpath d='M470 91l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M530 62.8l16.9 26.0h-7.8l13.0 20.8h-10.4l13.0 20.8h-49.4l13.0 -20.8h-10.4l13.0 -20.8h-7.8z'/%3E%3Cpath d='M600 93.2l12.3 19.0h-5.7l9.5 15.2h-7.6l9.5 15.2h-36.1l9.5 -15.2h-7.6l9.5 -15.2h-5.7z'/%3E%3Cpath d='M790 126l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M850 95.0l16.2 25.0h-7.5l12.5 20.0h-10.0l12.5 20.0h-47.5l12.5 -20.0h-10.0l12.5 -20.0h-7.5z'/%3E%3Cpath d='M905 101l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M975 130.4l11.7 18.0h-5.4l9.0 14.4h-7.2l9.0 14.4h-34.2l9.0 -14.4h-7.2l9.0 -14.4h-5.4z'/%3E%3Cpath d='M1215 116.6l14.3 22.0h-6.6l11.0 17.6h-8.8l11.0 17.6h-41.8l11.0 -17.6h-8.8l11.0 -17.6h-6.6z'/%3E%3Cpath d='M1280 97.8l16.9 26.0h-7.8l13.0 20.8h-10.4l13.0 20.8h-49.4l13.0 -20.8h-10.4l13.0 -20.8h-7.8z'/%3E%3Cpath d='M1345 133.2l12.3 19.0h-5.7l9.5 15.2h-7.6l9.5 15.2h-36.1l9.5 -15.2h-7.6l9.5 -15.2h-5.7z'/%3E%3C/g%3E%3Cpath d='M0 300L220 215L430 285L680 200L920 290L1180 220L1440 280V400H0Z' fill='%23c9d6c1'/%3E%3Cpath d='M728 252l34-27 34 27z' fill='%23c98f62'/%3E%3Crect x='736' y='252' width='52' height='30' fill='%23f8f5ec'/%3E%3Crect x='745' y='259' width='13' height='11' fill='%239cc4ca'/%3E%3Crect x='768' y='262' width='11' height='20' fill='%23b57f55'/%3E%3Cg fill='%23e39d8e'%3E%3Ccircle cx='157' cy='335' r='2.4'/%3E%3Ccircle cx='163' cy='335' r='2.4'/%3E%3Ccircle cx='160' cy='332' r='2.4'/%3E%3Ccircle cx='160' cy='338' r='2.4'/%3E%3C/g%3E%3Ccircle cx='160' cy='335' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23fbf7ea'%3E%3Ccircle cx='327' cy='365' r='2.4'/%3E%3Ccircle cx='333' cy='365' r='2.4'/%3E%3Ccircle cx='330' cy='362' r='2.4'/%3E%3Ccircle cx='330' cy='368' r='2.4'/%3E%3C/g%3E%3Ccircle cx='330' cy='365' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23d39fc4'%3E%3Ccircle cx='447' cy='325' r='2.4'/%3E%3Ccircle cx='453' cy='325' r='2.4'/%3E%3Ccircle cx='450' cy='322' r='2.4'/%3E%3Ccircle cx='450' cy='328' r='2.4'/%3E%3C/g%3E%3Ccircle cx='450' cy='325' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23e39d8e'%3E%3Ccircle cx='557' cy='370' r='2.4'/%3E%3Ccircle cx='563' cy='370' r='2.4'/%3E%3Ccircle cx='560' cy='367' r='2.4'/%3E%3Ccircle cx='560' cy='373' r='2.4'/%3E%3C/g%3E%3Ccircle cx='560' cy='370' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23fbf7ea'%3E%3Ccircle cx='637' cy='330' r='2.4'/%3E%3Ccircle cx='643' cy='330' r='2.4'/%3E%3Ccircle cx='640' cy='327' r='2.4'/%3E%3Ccircle cx='640' cy='333' r='2.4'/%3E%3C/g%3E%3Ccircle cx='640' cy='330' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23d39fc4'%3E%3Ccircle cx='697' cy='375' r='2.4'/%3E%3Ccircle cx='703' cy='375' r='2.4'/%3E%3Ccircle cx='700' cy='372' r='2.4'/%3E%3Ccircle cx='700' cy='378' r='2.4'/%3E%3C/g%3E%3Ccircle cx='700' cy='375' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23e39d8e'%3E%3Ccircle cx='847' cy='345' r='2.4'/%3E%3Ccircle cx='853' cy='345' r='2.4'/%3E%3Ccircle cx='850' cy='342' r='2.4'/%3E%3Ccircle cx='850' cy='348' r='2.4'/%3E%3C/g%3E%3Ccircle cx='850' cy='345' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23fbf7ea'%3E%3Ccircle cx='927' cy='372' r='2.4'/%3E%3Ccircle cx='933' cy='372' r='2.4'/%3E%3Ccircle cx='930' cy='369' r='2.4'/%3E%3Ccircle cx='930' cy='375' r='2.4'/%3E%3C/g%3E%3Ccircle cx='930' cy='372' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23d39fc4'%3E%3Ccircle cx='1037' cy='330' r='2.4'/%3E%3Ccircle cx='1043' cy='330' r='2.4'/%3E%3Ccircle cx='1040' cy='327' r='2.4'/%3E%3Ccircle cx='1040' cy='333' r='2.4'/%3E%3C/g%3E%3Ccircle cx='1040' cy='330' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23e39d8e'%3E%3Ccircle cx='1177' cy='362' r='2.4'/%3E%3Ccircle cx='1183' cy='362' r='2.4'/%3E%3Ccircle cx='1180' cy='359' r='2.4'/%3E%3Ccircle cx='1180' cy='365' r='2.4'/%3E%3C/g%3E%3Ccircle cx='1180' cy='362' r='1.6' fill='%23e5b93f'/%3E%3Cg fill='%23fbf7ea'%3E%3Ccircle cx='1317' cy='335' r='2.4'/%3E%3Ccircle cx='1323' cy='335' r='2.4'/%3E%3Ccircle cx='1320' cy='332' r='2.4'/%3E%3Ccircle cx='1320' cy='338' r='2.4'/%3E%3C/g%3E%3Ccircle cx='1320' cy='335' r='1.6' fill='%23e5b93f'/%3E%3C/svg%3E") bottom/max(100%,1080px) auto no-repeat,linear-gradient(#eef3f2,#eef0e6)}
+[data-theme="dark"] body::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320' preserveAspectRatio='xMidYMin slice'%3E%3Ccircle cx='120' cy='120' r='1.4' fill='%23aab4c4' opacity='0.6'/%3E%3Ccircle cx='300' cy='190' r='1' fill='%23aab4c4' opacity='0.5'/%3E%3Ccircle cx='470' cy='110' r='1.6' fill='%23aab4c4' opacity='0.7'/%3E%3Ccircle cx='590' cy='220' r='1' fill='%23aab4c4' opacity='0.45'/%3E%3Ccircle cx='690' cy='130' r='1.2' fill='%23aab4c4' opacity='0.6'/%3E%3Ccircle cx='780' cy='240' r='1' fill='%23aab4c4' opacity='0.4'/%3E%3Ccircle cx='1000' cy='120' r='1.5' fill='%23aab4c4' opacity='0.65'/%3E%3Ccircle cx='1120' cy='200' r='1' fill='%23aab4c4' opacity='0.5'/%3E%3Ccircle cx='1240' cy='110' r='1.3' fill='%23aab4c4' opacity='0.6'/%3E%3Ccircle cx='1380' cy='180' r='1.1' fill='%23aab4c4' opacity='0.5'/%3E%3Ccircle cx='560' cy='160' r='1' fill='%23aab4c4' opacity='0.5'/%3E%3Ccircle cx='930' cy='210' r='1' fill='%23aab4c4' opacity='0.4'/%3E%3Ccircle cx='956' cy='218' r='1.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1070' cy='225' r='1.8' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='418' cy='122' r='1.8' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1319' cy='232' r='1.2' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='320' cy='98' r='1.4' fill='%23c4cedd' opacity='0.7'/%3E%3Ccircle cx='1133' cy='282' r='1' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='1329' cy='85' r='1.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1249' cy='176' r='2.2' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='352' cy='234' r='1' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='60' cy='210' r='1.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='159' cy='90' r='1.4' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='103' cy='123' r='2.2' fill='%23c4cedd' opacity='0.7'/%3E%3Ccircle cx='525' cy='228' r='1.4' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='91' cy='274' r='1' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='980' cy='158' r='1' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='430' cy='207' r='2.2' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='632' cy='202' r='1' fill='%23c4cedd' opacity='0.7'/%3E%3Ccircle cx='204' cy='192' r='1.4' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1371' cy='146' r='1.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='200' cy='256' r='2.2' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='550' cy='155' r='1.8' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='621' cy='82' r='1.2' fill='%23c4cedd' opacity='0.7'/%3E%3Ccircle cx='173' cy='219' r='1.2' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='251' cy='177' r='1.2' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='31' cy='129' r='2.2' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='459' cy='88' r='1.8' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1319' cy='125' r='2.2' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='711' cy='78' r='1.8' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='869' cy='269' r='1' fill='%23c4cedd' opacity='0.5'/%3E%3Ccircle cx='271' cy='109' r='1' fill='%23c4cedd' opacity='0.7'/%3E%3Ccircle cx='236' cy='77' r='1.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1027' cy='120' r='1.4' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='1175' cy='123' r='2.2' fill='%23c4cedd' opacity='0.85'/%3E%3Ccircle cx='420' cy='262' r='1.4' fill='%23c4cedd' opacity='0.6'/%3E%3Ccircle cx='860' cy='150' r='70' fill='%232a3140' opacity='.35'/%3E%3Cpath d='M872 112a40 40 0 1 0 28 62a32 32 0 0 1-28-62z' fill='%23c9cfbd'/%3E%3Cg transform='translate(610 185) scale(1)' fill='%23232a2e'%3E%3Cellipse cx='0' cy='0' rx='70' ry='20'/%3E%3Cellipse cx='-28' cy='-13' rx='32' ry='22'/%3E%3Cellipse cx='22' cy='-18' rx='38' ry='28'/%3E%3C/g%3E%3Cg transform='translate(1120 150) scale(1.15)' fill='%23232a2e'%3E%3Cellipse cx='0' cy='0' rx='70' ry='20'/%3E%3Cellipse cx='-28' cy='-13' rx='32' ry='22'/%3E%3Cellipse cx='22' cy='-18' rx='38' ry='28'/%3E%3C/g%3E%3C/svg%3E") top/100% 40vh no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 400' preserveAspectRatio='xMidYMax slice'%3E%3Cpath d='M0 210L180 120L340 190L540 70L720 180L900 95L1100 195L1280 110L1440 170V400H0Z' fill='%231a201d'/%3E%3Cg fill='%23101512'%3E%3Cpath d='M120 131l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M175 105.0l16.2 25.0h-7.5l12.5 20.0h-10.0l12.5 20.0h-47.5l12.5 -20.0h-10.0l12.5 -20.0h-7.5z'/%3E%3Cpath d='M250 145.4l11.7 18.0h-5.4l9.0 14.4h-7.2l9.0 14.4h-34.2l9.0 -14.4h-7.2l9.0 -14.4h-5.4z'/%3E%3Cpath d='M470 91l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M530 62.8l16.9 26.0h-7.8l13.0 20.8h-10.4l13.0 20.8h-49.4l13.0 -20.8h-10.4l13.0 -20.8h-7.8z'/%3E%3Cpath d='M600 93.2l12.3 19.0h-5.7l9.5 15.2h-7.6l9.5 15.2h-36.1l9.5 -15.2h-7.6l9.5 -15.2h-5.7z'/%3E%3Cpath d='M790 126l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M850 95.0l16.2 25.0h-7.5l12.5 20.0h-10.0l12.5 20.0h-47.5l12.5 -20.0h-10.0l12.5 -20.0h-7.5z'/%3E%3Cpath d='M905 101l13 20h-6l10 16h-8l10 16h-38l10 -16h-8l10 -16h-6z'/%3E%3Cpath d='M975 130.4l11.7 18.0h-5.4l9.0 14.4h-7.2l9.0 14.4h-34.2l9.0 -14.4h-7.2l9.0 -14.4h-5.4z'/%3E%3Cpath d='M1215 116.6l14.3 22.0h-6.6l11.0 17.6h-8.8l11.0 17.6h-41.8l11.0 -17.6h-8.8l11.0 -17.6h-6.6z'/%3E%3Cpath d='M1280 97.8l16.9 26.0h-7.8l13.0 20.8h-10.4l13.0 20.8h-49.4l13.0 -20.8h-10.4l13.0 -20.8h-7.8z'/%3E%3Cpath d='M1345 133.2l12.3 19.0h-5.7l9.5 15.2h-7.6l9.5 15.2h-36.1l9.5 -15.2h-7.6l9.5 -15.2h-5.7z'/%3E%3C/g%3E%3Cpath d='M0 300L220 215L430 285L680 200L920 290L1180 220L1440 280V400H0Z' fill='%231e2521'/%3E%3Ccircle cx='752' cy='262' r='34' fill='%23f2c56b' opacity='.09'/%3E%3Cpath d='M728 252l34-27 34 27z' fill='%232f2924'/%3E%3Crect x='736' y='252' width='52' height='30' fill='%2327221e'/%3E%3Crect x='745' y='259' width='13' height='11' fill='%23f2c56b'/%3E%3Crect x='768' y='262' width='11' height='20' fill='%231b1815'/%3E%3Ccircle cx='160' cy='335' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='160' cy='335' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='330' cy='365' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='330' cy='365' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='450' cy='325' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='450' cy='325' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='560' cy='370' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='560' cy='370' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='640' cy='330' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='640' cy='330' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='700' cy='375' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='700' cy='375' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='850' cy='345' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='850' cy='345' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='930' cy='372' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='930' cy='372' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='1040' cy='330' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='1040' cy='330' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='1180' cy='362' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='1180' cy='362' r='2' fill='%23e8e27a' opacity='.9'/%3E%3Ccircle cx='1320' cy='335' r='7' fill='%23e8e27a' opacity='.13'/%3E%3Ccircle cx='1320' cy='335' r='2' fill='%23e8e27a' opacity='.9'/%3E%3C/svg%3E") bottom/max(100%,1080px) auto no-repeat,linear-gradient(#121614,#161b18)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+/* viewer (ดูอย่างเดียว): ซ่อนเมนูและทุกปุ่ม/ฟอร์มที่เพิ่ม แก้ไข ลบ */
+body.readonly nav button[data-tab="rooms"], body.readonly nav button[data-tab="history"],
+body.readonly #entryForm, body.readonly #exForm, body.readonly #btnAddRoom,
+body.readonly [data-eedit], body.readonly [data-edel], body.readonly [data-exedit], body.readonly [data-exdel],
+body.readonly [data-edit], body.readonly [data-del], body.readonly [data-tdbook]{display:none!important}
+body.readonly select.pay{pointer-events:none;background-image:none;padding-right:9px}
+.rolebadge{font-size:11.5px;padding:1px 8px;border-radius:99px;margin-left:4px;white-space:nowrap}
+.rolebadge.viewer{background:var(--dep-soft);color:var(--dep-ink)}
+.rolebadge.admin{background:var(--accent-soft);color:var(--accent)}
+.usermenu .uline{margin:2px 0}
+.usermenu .uline b{color:var(--ink)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:18px;color:var(--accent);margin-right:auto;display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px;border-radius:10px;overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.hero{position:relative;height:150px;border-radius:14px;overflow:hidden;margin-bottom:16px;border:1px solid var(--line)}
+.hero .scn{position:absolute;inset:0}
+.hero .txt{position:absolute;left:22px;bottom:16px;right:22px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.45)}
+.hero .txt b{font-size:22px;display:block}
+.hero .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.hero .stats span{background:rgba(0,0,0,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:2px 10px;border-radius:99px;font-size:13px;text-shadow:none}
+@media (max-width:640px){.hero{height:120px}.hero .txt b{font-size:18px}}
+.user{position:relative;display:flex;align-items:center;gap:8px}
+/* ชื่อ + ตำแหน่ง แสดงข้างปุ่มบัญชีตลอด */
+.uinfo{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25;font-size:13px}
+.uinfo b{color:var(--ink);font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uinfo .rolebadge{margin:2px 0 0;font-size:11px;padding:0 7px}
+/* ปุ่มบัญชีมุมขวาบน (ตัวอักษรแรกของชื่อ) → เมนูเล็ก: ชื่อ · เปลี่ยนรหัสผ่าน · ออกจากระบบ */
+.userbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font:inherit;font-weight:700;font-size:15px;cursor:pointer;padding:0}
+.userbtn:hover,.userbtn[aria-expanded="true"]{border-color:var(--accent)}
+/* ปุ่มสลับโหมด: โหมดสว่างโชว์พระอาทิตย์ · โหมดมืดโชว์พระจันทร์ (กดแล้วสลับ) */
+.themebtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.themebtn:hover{border-color:var(--accent)}.themebtn svg{width:20px;height:20px}
+[data-theme="dark"] .themebtn .sun,:root:not([data-theme="dark"]) .themebtn .moon{display:none}
+.usermenu{position:absolute;right:0;top:calc(100% + 6px);min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;z-index:40;display:flex;flex-direction:column}
+.usermenu .uname{padding:8px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;white-space:nowrap}
+.usermenu button{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.usermenu button:hover{background:var(--bg)}
+.brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+nav{display:flex;gap:4px}
+nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
+nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+h2{margin:0;font-size:18px}
+h3{margin:0 0 12px;font-size:15px}
+button.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;font:inherit;cursor:pointer}
+button.btn:hover{border-color:var(--accent)}
+button.btn:disabled{opacity:.4;cursor:default;border-color:var(--line)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.pri:hover{filter:brightness(1.08)}
+button.dang{color:var(--danger)}
+button.sm{padding:3px 10px;font-size:13px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+label{display:block;font-size:13px;color:var(--muted)}
+label > input,label > select,label > textarea{margin-top:3px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px}
+.tag.ok{background:var(--accent-soft);color:var(--accent)}
+.tag.off{background:var(--warn-soft);color:var(--warn)}
+.tag.due{background:var(--danger-soft);color:var(--danger)}
+.tag.dep{background:var(--dep-soft);color:var(--dep-ink)}
+.chip.dep{color:#3d2f00}
+.chip.paid{color:var(--on-accent)}
+select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-weight:600;cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.empty{color:var(--muted);text-align:center;padding:28px}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cal .h{background:var(--cal-head);color:var(--cal-head-ink);text-align:center;font-size:13px;font-weight:700;padding:7px 0}  /* แถบหัวข้อวันสีเดียว แยกจากช่องวันที่ */
+.cal .d{background:var(--panel);min-height:104px;padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cal .d:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.cal .d.other{background:var(--other);color:var(--muted)}
+.cal .d.today{background:var(--today)}
+.cal .dn{display:flex;justify-content:space-between;font-size:13px}
+.cal .sum{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.cal .avail{margin-top:auto;align-self:flex-end;font-size:11.5px;font-weight:700;line-height:1.5;padding:0 7px;border-radius:99px;
+  background:var(--accent-soft);color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cal .avail.full{background:var(--danger-soft);color:var(--danger)}
+.chip{font-size:11.5px;border-radius:5px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.chip.pend{color:#fff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+
+/* summary */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--muted)}
+/* มือถือ: กล่องตัวเลข 2 กล่องต่อแถว (หน้าวันนี้ / สรุป) */
+@media (max-width:560px){.kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:12px}.kpi .v{font-size:20px}.kpi .s{overflow-wrap:anywhere}}
+/* รายการหน้าวันนี้: ขึ้นบรรทัดใหม่ได้ แต่ไม่ตัดกลางคำ (เบอร์โทร, ช่องทาง, ออกวันถัดไป ฯลฯ อยู่ก้อนเดียว) */
+.titem .who .nw{display:inline-block}  /* ก้อนคำย้ายลงบรรทัดใหม่ทั้งก้อน · ถ้ายาวกว่าช่อง ค่อยตัดในก้อน (ไม่ล้นทับ) */
+.titem .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.sbdg{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.titem .side .sbdg{margin-left:0}
+.sbd{display:inline-flex;align-items:center;gap:3px;height:26px;padding:0 3px;border-radius:99px;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.sbd.n{padding-right:8px}.sbd svg{width:22px;height:22px}
+.sbd.in{background:var(--accent-soft);color:var(--accent)}.sbd.co{background:color-mix(in srgb,var(--c2) 18%,transparent);color:var(--c2)}.sbd.out{background:var(--warn-soft);color:var(--warn)}
+.titem .sbdg.narrow{display:none}
+/* จอกว้าง: ชื่อกับป้ายรูปอยู่แนวเดียวกัน (กึ่งกลาง) ป้ายเล็กลงให้สูงไม่เกินบรรทัดชื่อ */
+.titem .who b:has(.sbdg){display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px}.titem .who b .sbdg{margin-left:0}.titem .who b .sbd{height:22px;font-size:12px}.titem .who b .sbd svg{width:18px;height:18px}
+.slegend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 16px 14px;font-size:12px;color:var(--muted)}.slegend>span{display:inline-flex;align-items:center;gap:5px}.slegend .sbd{height:22px}.slegend .sbd svg{width:18px;height:18px}
+@media (max-width:560px){.titem{gap:8px;padding:8px}.titem .sbdg.wide{display:none}.titem .sbdg.narrow{display:inline-flex}}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.charts .card{margin:0}
+.charts .grp{grid-column:1/-1;margin:10px 0 -4px;font-size:17px}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hday{font-size:14px;font-weight:700;color:var(--ink);background:var(--accent-soft);border-radius:8px;padding:6px 12px;margin-top:8px}
+.hday:first-child{margin-top:0}
+.hday small{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
+/* แถบสีซ้าย = ประเภทการทำ (เพิ่ม/แก้ไข/ลบ) */
+.hrow{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:9px;padding:9px 12px;font-size:14px;background:var(--panel)}
+.hrow.create{border-left-color:var(--accent)}.hrow.update{border-left-color:var(--dep)}.hrow.delete{border-left-color:var(--danger)}
+.hrow.new{background:var(--accent-soft)}
+.hrow .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hrow .who{margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hrow .sub{font-size:13px;color:var(--muted);margin-top:3px}
+.newtag{display:inline-block;margin-left:6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:0 7px;border-radius:99px;vertical-align:1px}
+/* ป้ายจำนวนรายการใหม่: วางทับไอคอนนาฬิกาด้านซ้ายของเมนู (ยังอยู่ในขอบปุ่ม → ไม่ถูกแถบเมนูตัด) */
+.nico{position:relative;display:inline-block}
+.nbadge{position:absolute;top:-7px;left:-9px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;box-sizing:border-box;box-shadow:0 0 0 2px var(--panel)}
+.hinew{display:flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:8px 10px;margin-bottom:10px;font-size:14px}
+.hrow .t{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.hrow .top b{font-weight:600}
+.hrow .chg{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.hrow .chg span{background:var(--other);border-radius:6px;padding:2px 8px}
+.hrow .chg s{color:var(--danger);text-decoration:line-through}
+.hrow .chg ins{color:var(--accent);text-decoration:none;font-weight:600}
+.act{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;text-align:center}
+.act.create{background:var(--accent-soft);color:var(--accent)}
+.act.update{background:var(--dep-soft);color:var(--dep-ink)}
+.act.delete{background:var(--danger-soft);color:var(--danger)}
+.mtable td,.mtable th{padding:7px 8px}
+.mtable tbody tr{cursor:pointer}
+.mtable tbody tr:hover{background:var(--bg)}
+.mtable tr.sel{background:var(--accent-soft)!important;font-weight:600}
+.mtable tr.zero td{color:var(--muted)}
+.mtable tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:0}
+svg text{fill:var(--muted);font-size:11px}
+svg .bar{fill:var(--accent)}
+svg .col{cursor:pointer}
+svg .col:hover .bar{filter:brightness(1.2)}
+svg .col:hover .hit{fill:var(--accent-soft);opacity:.5}
+.hbar,.donut circle{cursor:pointer}
+.hbar:hover .fill,.donut circle:hover{filter:brightness(1.15)}
+.tip{position:fixed;z-index:40;pointer-events:none;background:var(--ink);color:var(--panel);padding:6px 10px;border-radius:8px;font-size:13px;line-height:1.4;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);display:none}
+.tip b{font-size:15px}
+svg .grid{stroke:var(--line)}
+.hbar{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.hbar.guest{grid-template-columns:30px 150px 1fr 120px;cursor:pointer}
+.hbar .rk{font-weight:700;text-align:center;color:var(--muted)}
+.hbar .track{background:var(--bg);border-radius:6px;height:18px;overflow:hidden}
+.hbar .fill{height:100%;border-radius:6px}
+.hbar .val{text-align:right;font-variant-numeric:tabular-nums}
+.hbar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.donut{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:20;overflow:auto}
+.mask.on{display:flex}
+.modal{background:var(--panel);border-radius:14px;width:100%;max-width:560px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal .x{border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer}
+/* ดึงจอลงเพื่อ refresh (จอสัมผัส) · ปิดการดึงของเบราว์เซอร์ ไม่ให้ซ้อนกัน */
+@media (pointer:coarse){html{overscroll-behavior-y:contain}}
+.ptr{position:fixed;top:0;left:50%;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;z-index:30;pointer-events:none;opacity:0;transform:translateY(-48px)}
+.ptr.back{transition:transform .2s,opacity .2s}.ptr.ready{border-color:var(--accent)}
+.ptr svg{width:30px;height:30px;transform:rotate(-90deg)}.ptr circle{fill:none;stroke-width:3.5;stroke:var(--line)}
+.ptr .arc{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:81.7;stroke-dashoffset:81.7}
+.ptr.spin svg{animation:ptrSpin .8s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(270deg)}}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:8px 0 24px}
+
+/* วันนี้ */
+.tday{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
+.tday .card{margin:0}
+.tlist{display:flex;flex-direction:column;gap:8px}
+.tmon{display:flex;align-items:baseline;gap:8px;padding:6px 10px;margin-top:6px;border-radius:8px;background:var(--cal-head);color:var(--cal-head-ink);font-weight:600}
+.tmon:first-child{margin-top:0}
+.tmon .sp{flex:1}
+.tmon small{font-weight:400;font-size:12.5px}
+.titem{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.titem .who{flex:1;min-width:0}
+.titem .who b{display:block}
+.titem .who span{font-size:13px;color:var(--muted)}
+/* หน้าวันนี้: เข้าพักคืนนี้ = การ์ดหลัก (กรอบสีหลัก หัวการ์ดมีแถบสี) · ค้างชำระทั้งหมด = การ์ดรอง (พื้นจาง หัวข้อเล็ก) */
+.card.focus{border:2px solid var(--accent);padding:0;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.07)}
+.card.focus .fhead{background:var(--accent-soft);padding:12px 16px;margin:0 0 12px}
+.card.focus h3{font-size:18px;color:var(--accent)}
+.card.focus .tlist{padding:0 16px 10px}
+.card.focus .fhead{position:relative;overflow:hidden}.card.focus .fhead>:not(.confetti){position:relative;z-index:1}
+.confetti{position:absolute;inset:0;pointer-events:none;transition:opacity 1.2s}.confetti.off{opacity:0}
+.confetti span{position:absolute;top:-16px;animation:cfFall var(--t) cubic-bezier(.3,.2,.7,1) var(--d) infinite;will-change:transform}
+.confetti i{display:block;animation:cfFlip var(--f) linear var(--d) infinite}
+@keyframes cfFall{0%{transform:translate(0,0)}35%{transform:translate(var(--x1),38px)}70%{transform:translate(var(--x2),76px)}100%{transform:translate(var(--x3),116px);opacity:.1}}
+.confetti em{position:absolute;width:0;height:0;transform:scale(var(--s))}
+.confetti b{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;opacity:0;animation:cfBurst var(--t) ease-out var(--d) infinite}
+@keyframes cfBurst{0%{transform:rotate(var(--a)) translateX(0);opacity:0}6%{opacity:1}45%{transform:rotate(var(--a)) translateX(20px);opacity:.9}60%,100%{transform:rotate(var(--a)) translateX(24px);opacity:0}}
+@keyframes cfFlip{to{transform:rotate3d(var(--ax),var(--ay),.4,720deg)}}
+@media (prefers-reduced-motion:reduce){.confetti span,.confetti i,.confetti b{animation:none}.confetti span{top:35%}.confetti b{opacity:.8;transform:rotate(var(--a)) translateX(16px)}}
+.cal .d.party{position:relative;overflow:hidden}.cal .d.party>:not(.confetti){position:relative;z-index:1}
+.fcount{background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px}
+.card.subtle{background:var(--other)}
+.card.subtle h3{font-size:14px;color:var(--muted)}
+.card.subtle .titem{background:var(--panel)}
+/* รูปประเภทห้อง (รายการเข้าพักคืนนี้ / ค้างชำระ) */
+.rtype{width:36px;height:36px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;background:#f1efe8}
+.rtype svg{width:30px;height:30px}
+.rt-single{background:#e6f1fb}.rt-double{background:#fbeaf0}.rt-family{background:#eaf3de}.rt-fan{background:#e1f5ee}.rt-ac{background:#eeedfe}.rt-month{background:#faeeda}
+[data-theme="dark"] .rtype{background:#2c2c2a}[data-theme="dark"] .rt-single{background:#0c447c}[data-theme="dark"] .rt-double{background:#72243e}[data-theme="dark"] .rt-family{background:#27500a}[data-theme="dark"] .rt-fan{background:#085041}[data-theme="dark"] .rt-ac{background:#3c3489}[data-theme="dark"] .rt-month{background:#633806}
+.stay{display:inline-block;margin-left:6px;padding:0 8px;border-radius:99px;font-size:11.5px;font-weight:700;vertical-align:1px}
+.stay.in{background:var(--accent-soft);color:var(--accent)}
+.stay.cont{background:color-mix(in srgb,var(--c2) 18%,transparent);color:var(--c2)}
+.daynav{display:flex;align-items:center;gap:8px}
+nav{overflow-x:auto;max-width:100%;scrollbar-width:none}
+nav button{white-space:nowrap}
+
+/* จอที่เมนูเรียงแถวเดียวไม่พอ (มือถือ / tablet / iPad): แถว 1 = โลโก้ + ชื่อ/ตำแหน่ง มุมขวาบน · แถว 2 = เมนูเต็มความกว้าง */
+@media (max-width:1180px){
+  .user{order:2} nav{order:3;width:100%}
+}
+@media (max-width:640px){
+  .bar{gap:10px}
+  .brand small{display:none}
+  .hbar.guest{grid-template-columns:26px 1fr 80px}.hbar.guest .track{display:none}
+  nav button{padding:6px 9px;font-size:13.5px}
+  .cal .d{min-height:70px;padding:3px}
+  .chip{font-size:10px;padding:0 3px}
+  .cal .sum{font-size:11px}
+  .hbar{grid-template-columns:80px 1fr 70px}
+  th.hide-sm,td.hide-sm{display:none}
+}

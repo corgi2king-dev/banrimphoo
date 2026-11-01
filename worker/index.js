@@ -13,6 +13,8 @@ const ITER = 100_000; // เพดาน PBKDF2 ของ Workers
 const PUBLIC = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/api/me', '/api/login']);
 // ไม่ต้องเช็ก session (ไม่แตะ D1) — หน้าล็อกอินเช็กเองผ่าน /api/me แล้ว redirect ฝั่งเบราว์เซอร์
 const NO_SESSION = new Set(['/login', '/login.html', '/scene.js', '/photo.jpg', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/api/login']);
+// ไฟล์ที่ next build สร้าง: ชื่อไฟล์เปลี่ยนตามเนื้อหา → ไม่ต้องเข้าระบบ (หน้า login ใช้ด้วย) และเก็บ cache ได้ยาว
+const isStatic = p => p.startsWith('/_next/static/');
 // cache: รูป → เก็บไว้ 1 วัน · scene.js / หน้า html → ถามใหม่ทุกครั้งแต่ได้ 304 ถ้าไม่เปลี่ยน (ETag) — แก้ scene.js แล้วเห็นผลทันทีหลัง deploy
 const CACHE = { '/scene.js': 'public, no-cache', '/photo.jpg': 'public, max-age=86400', '/favicon.svg': 'public, max-age=86400',
   '/manifest.webmanifest': 'public, max-age=86400', '/icon-192.png': 'public, max-age=86400', '/icon-512.png': 'public, max-age=86400', '/apple-touch-icon.png': 'public, max-age=86400' };  // ไฟล์ติดตั้งแอป (PWA) — มือถืออ่านก่อนล็อกอิน
@@ -281,11 +283,11 @@ export default {
 
 async function handle(req, env) {
   const url = new URL(req.url), p = url.pathname;
-  const s = NO_SESSION.has(p) ? null : await session(req, env);
+  const s = NO_SESSION.has(p) || isStatic(p) ? null : await session(req, env);
 
   if (req.method === 'GET') {
     if (p === '/api/me') return json(200, { user: s?.user || null, role: s?.role || null, setup: false });
-    if (!PUBLIC.has(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
+    if (!PUBLIC.has(p) && !isStatic(p) && !s) return p.startsWith('/api/') ? json(401, { error: 'login' }) : Response.redirect(new URL('/login', url), 302);
     if (p === '/api/data') {  // รวมชื่อผู้ใช้/สิทธิ์ + เวอร์ชันข้อมูลมาด้วย ไม่ต้องเรียก /api/me อีกรอบ
       // ?year=YYYY → เฉพาะปีนั้น (+ ธ.ค. ปีก่อน / ม.ค. ปีหน้า สำหรับการจองข้ามปี) · &unpaid=1 → แนบการจองที่ยังไม่จ่ายครบทุกปี + รายชื่อปีที่มีข้อมูล
       // ไม่ใส่ year = ทั้งหมด (แบบเดิม)
@@ -307,7 +309,7 @@ async function handle(req, env) {
     if (p.startsWith('/api/')) return json(404, { error: 'not found' });
     const res = await env.ASSETS.fetch(req);
     const out = new Response(res.body, res);
-    out.headers.set('Cache-Control', CACHE[p] || 'private, no-cache');
+    out.headers.set('Cache-Control', isStatic(p) ? 'public, max-age=31536000, immutable' : CACHE[p] || 'private, no-cache');
     return out;
   }
 

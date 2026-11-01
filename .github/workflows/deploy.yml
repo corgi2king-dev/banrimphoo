@@ -34,8 +34,11 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: ติดตั้ง wrangler (ตาม package-lock.json)
+      - name: ติดตั้ง package (ตาม package-lock.json)
         run: npm ci
+
+      - name: สร้างหน้าเว็บ (next build → out/)
+        run: npm run build
 
       - name: เช็กการตั้งค่า
         run: |
