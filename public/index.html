@@ -923,6 +923,8 @@ const thDate = key => { const d = parseYmd(key); return `${TH_DOW[d.getDay()]}. 
 // เบอร์โทร: กดแล้วโทรออก (มือถือ)
 const telLink = p => p ? ` <span class="nw">· <a href="tel:${esc(p.replace(/[^\d+]/g, ''))}" style="color:var(--c2)" onclick="event.stopPropagation()">📞 ${esc(p)}</a></span>` : '';
 const shortTh = key => `${+key.slice(8)} ${TH_MON[+key.slice(5, 7) - 1]}`;
+// ยอดค้าง (มัดจำแล้ว) ในบรรทัดรองของรายการ
+const dueTxt = n => ` <span class="nw">· ค้าง <b style="display:inline;color:var(--danger)">${baht(remaining(n))}</b></span>${received(n) ? ` <span class="nw">(มัดจำแล้ว <b style="display:inline;color:var(--accent)">${baht(received(n))}</b>)</span>` : ''}`;
 // สถานะชำระของทั้งการเข้าพัก (ทุกคืนใน nights)
 const paidTag = nights => {
   const paid = nights.every(n => n.paid), dep = nights.reduce((a, n) => a + (n.paid ? 0 : received(n)), 0);
@@ -964,9 +966,12 @@ function renderToday() {
     const badge = w => `<span class="sbdg ${w}">${isIn ? `<span class="sbd in" title="${isToday ? 'เช็คอินวันนี้' : 'เช็คอิน'}">${ico('key')}</span>`
       : `<span class="sbd co n" title="พักต่อ คืนที่ ${nth}/${st.nights.length}">${ico('sleep')}${nth}/${st.nights.length}</span>`}${out
       ? `<span class="sbd out" title="ออก${isToday ? 'พรุ่งนี้' : 'วันถัดไป'}">${ico('out')}</span>` : ''}</span>`;
+    // ชำระแล้ว: ขึ้นต้นด้วยยอดเงิน · ยังไม่ครบ: ใช้ยอดค้างด้านหลังแทน (ตัดจุดคั่นตัวแรกออก)
+    const rest = `${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.paid ? '' : dueTxt(e)}${e.channel ? ` <span class="nw">· ${esc(e.channel)}</span>` : ''}${extra || ''}`;
+    const sub = e.paid ? `<b style="display:inline;color:var(--accent)">${baht(e.amount)}</b>` + rest : rest.replace('· ', '');
     return `<div class="titem">${roomTypeIcon(r?.type)}
       <div class="who"><b>ห้อง ${esc(r?.name || '?')} · ${esc(e.guest || 'ไม่ระบุชื่อ')}${badge('wide')}</b>
-        <span>${baht(e.amount)}${telLink(e.phone || st.nights.find(n => n.phone)?.phone)}${e.channel ? ` <span class="nw">· ${esc(e.channel)}</span>` : ''}${extra || ''}</span></div>
+        <span>${sub}</span></div>
       <div class="side">${badge('narrow')}${paidTag([e])}</div></div>`;  // เฉพาะคืนนี้: ยอด/ช่องทาง/สถานะของคืนนี้ · ขวา: ป้ายเช็คอิน/พักต่อ บน สถานะจ่ายเงิน ล่าง
   };
   const empty = t => `<div class="empty" style="padding:12px">${t}</div>`;
@@ -995,7 +1000,7 @@ function renderToday() {
   dueEs.forEach(n => { const k = n.date.slice(0, 7); dueByMon.set(k, [...(dueByMon.get(k) || []), n]); });
   const dueItem = n => `<div class="titem">${roomTypeIcon(roomById(n.roomId)?.type)}
       <div class="who"><b>ห้อง ${esc(roomById(n.roomId)?.name || '?')} · ${esc(n.guest || 'ไม่ระบุชื่อ')}</b>
-        <span>${TH_DOW[parseYmd(n.date).getDay()]}. ${shortTh(n.date)}${n.date.slice(0, 4) !== String(today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}${telLink(n.phone)} <span class="nw">· ค้าง <b style="display:inline;color:var(--danger)">${baht(remaining(n))}</b></span>${received(n) ? ` <span class="nw">(มัดจำแล้ว ${baht(received(n))})</span>` : ''}</span></div>
+        <span>${TH_DOW[parseYmd(n.date).getDay()]}. ${shortTh(n.date)}${n.date.slice(0, 4) !== String(today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}${telLink(n.phone)}${dueTxt(n)}</span></div>
       ${paidTag([n])}</div>`;
   $('#tdDue').innerHTML = [...dueByMon].map(([k, list]) => `<div class="tmon">📅 ${TH_MONTHS[+k.slice(5) - 1]} ${be(+k.slice(0, 4))}<div class="sp"></div>
       <small>${new Set(list.map(n => n.roomId)).size} ห้อง · ${list.length} คืน · </small><span style="color:var(--danger)">${baht(list.reduce((a, n) => a + remaining(n), 0))}</span></div>`
