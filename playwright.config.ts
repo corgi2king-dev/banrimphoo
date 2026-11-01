@@ -14,7 +14,7 @@ const browsers = { chromium: devices['Desktop Chrome'], webkit: devices['Desktop
 const projects = Object.entries(browsers).flatMap(([b, dev]) => Object.entries(sizes).flatMap(([s, viewport]) =>
   (['light', 'dark'] as const).map(colorScheme => ({
     name: `${b}-${s}-${colorScheme}`,
-    testIgnore: /(api|visual)\.spec/,
+    testIgnore: /(api|visual|perf)\.spec/,
     use: { ...dev, viewport, colorScheme, deviceScaleFactor: 1 },
   }))));
 
@@ -27,7 +27,7 @@ export default defineConfig({
   projects: [
     ...projects,
     { name: 'api', testMatch: /api\.spec/, use: { ...devices['Desktop Chrome'] } },
-    { name: 'visual', testMatch: /visual\.spec/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'visual', testMatch: /(visual|perf)\.spec/, use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
     command: `node ${resolve('e2e/prepare.mjs')} ${state} ${repo} && npx wrangler dev --port ${port} --ip 127.0.0.1 --local-protocol https --test-scheduled --persist-to ${state}`,
