@@ -5,6 +5,7 @@ import { sameStay, stayIndex } from '@/lib/stay';
 import { changesOf, dayLabel, roomNameOf } from '@/lib/history';
 import { exColor, roomColor, roomTypeKey } from '@/lib/rooms';
 import { computeSummary } from '@/lib/summary';
+import { versionText } from '@/lib/version';
 import type { Db, Entry } from '@/lib/types';
 
 const E = (x: Partial<Entry>): Entry => ({ id: 'a', date: '2026-11-15', roomId: 'r1', amount: 500, ...x });
@@ -87,4 +88,8 @@ describe('summary', () => {
     expect(c.top[0]).toMatchObject({ name: 'ก', nights: 3, sum: 1500, visits: 2, last: '2026-11-05' });
   });
   it('ไม่มีห้องเปิดเลย ใช้จำนวนห้องทั้งหมด', () => expect(computeSummary({ ...db, rooms: [{ id: 'r', name: 'r', status: 'closed' }] }, 2026, 10).openRooms).toBe(1));
+});
+describe('version', () => {
+  it('เลขรอบ, commit และวันที่เวลาไทย', () => expect(versionText({ version: '12', commit: 'a58e086abcdef', time: '2026-11-01T18:30:00Z' })).toBe('เวอร์ชัน 12 · a58e086 · 2 พ.ย. 2569'));
+  it('build ในเครื่องไม่มีเลขรอบ', () => expect(versionText({ version: undefined, commit: undefined, time: undefined })).toBe('เวอร์ชันทดสอบในเครื่อง'));
 });

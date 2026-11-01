@@ -83,3 +83,15 @@ test('ไม่มีห้องเลย เปิดเว็บที่เ�
   await expect(page.locator('#roomRows')).toContainText('ยังไม่มีห้องพัก');
   resetDb();
 });
+test('เวอร์ชันอยู่ล่างสุดในเมนูบัญชี', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#appVersion')).toBeHidden();
+  await page.locator('#userBtn').click();
+  await expect(page.locator('#appVersion')).toBeVisible();
+  await expect(page.locator('#appVersion')).toContainText('เวอร์ชัน');
+  expect(await page.locator('#userMenu > :last-child').getAttribute('id')).toBe('appVersion');
+  const box = (await page.locator('#userMenu').boundingBox())!, v = (await page.locator('#appVersion').boundingBox())!;
+  expect(v.x + v.width).toBeLessThanOrEqual(box.x + box.width);
+  await page.locator('#appVersion').click();
+  await expect(page.locator('#userMenu')).toBeVisible();
+});

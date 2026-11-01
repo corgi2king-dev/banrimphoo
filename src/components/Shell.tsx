@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { store, VIEWER_TABS } from '@/lib/store';
 import { TH_DOW, TH_MONTHS, baht, be, sumAmount, ymd } from '@/lib/format';
 import { CloseX, Modal, useStore } from './common';
+import { versionText } from '@/lib/version';
 import type { Tab } from '@/lib/types';
 
 const NAV: [Tab, string][] = [['today', '🏠 วันนี้'], ['calendar', '📅 บันทึกค่าเช่า'], ['expenses', '🧾 ค่าใช้จ่าย'], ['rooms', '🛏 จัดการห้องพัก'], ['summary', '📊 สรุป']];
@@ -57,6 +58,7 @@ export function Header() {
               await fetch('/api/logout', { method: 'POST' }).catch(() => {});
               store.toLogin();
             }}>🚪 ออกจากระบบ</button>
+            <div className="uver" id="appVersion">{versionText()}</div>
           </div>
         </div>
       </div>

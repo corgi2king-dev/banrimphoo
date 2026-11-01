@@ -18,10 +18,81 @@ concurrency:
 permissions:
   contents: read
 
+# แยกเป็นกล่องตามขั้นตอน: ตรวจการตั้งค่า → เทส + Build (พร้อมกัน) → อัปเดตฐานข้อมูล → Deploy
+# กล่องไหนไม่ผ่าน กล่องถัดไปไม่รัน · secret ส่งให้เฉพาะกล่องที่ต้องใช้
 jobs:
-  deploy:
-    if: github.ref == 'refs/heads/main'   # deploy ได้เฉพาะ branch main
+  check:
+    name: ตรวจการตั้งค่า
+    if: github.ref == 'refs/heads/main'   # deploy ได้เฉพาะ branch main (กล่องนี้ถูกข้าม = กล่องหลังถูกข้ามตาม)
     runs-on: ubuntu-24.04   # ระบุรุ่นตรง ๆ กันเปลี่ยนเองตอน ubuntu-latest ย้ายรุ่น
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: เช็ก secret และฐานข้อมูล
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::ยังไม่ได้ตั้ง secret CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::ยังไม่ได้ตั้ง secret CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          if grep -q '"database_id": "00000000-0000-0000-0000-000000000000"' wrangler.jsonc; then
+            echo "::error::wrangler.jsonc ยังไม่มี database_id จริง — สร้าง D1 (npx wrangler d1 create banrimphoo) แล้ว commit ก่อน"; exit 1
+          fi
+
+  test:
+    name: เทส
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: ติดตั้ง package (ตาม package-lock.json)
+        run: npm ci
+
+      - name: ตรวจชนิดข้อมูล
+        run: npm run typecheck
+
+      - name: Unit test
+        run: npm run test:unit
+
+  build:
+    name: Build
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: ติดตั้ง package (ตาม package-lock.json)
+        run: npm ci
+
+      - name: สร้างหน้าเว็บ (next build → out/)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_VERSION: ${{ github.run_number }}   # เลขรอบที่กด Run workflow แสดงที่ล่างเว็บ
+          NEXT_PUBLIC_APP_COMMIT: ${{ github.sha }}
+
+      - name: เก็บไฟล์หน้าเว็บให้กล่อง Deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-out
+          path: out
+          retention-days: 1
+          if-no-files-found: error
+
+  migrate:
+    name: อัปเดตฐานข้อมูล
+    needs: [test, build]
+    runs-on: ubuntu-24.04
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -37,17 +108,6 @@ jobs:
       - name: ติดตั้ง package (ตาม package-lock.json)
         run: npm ci
 
-      - name: สร้างหน้าเว็บ (next build → out/)
-        run: npm run build
-
-      - name: เช็กการตั้งค่า
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::ยังไม่ได้ตั้ง secret CLOUDFLARE_API_TOKEN"; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::ยังไม่ได้ตั้ง secret CLOUDFLARE_ACCOUNT_ID"; exit 1; }
-          if grep -q '"database_id": "00000000-0000-0000-0000-000000000000"' wrangler.jsonc; then
-            echo "::error::wrangler.jsonc ยังไม่มี database_id จริง — สร้าง D1 (npx wrangler d1 create banrimphoo) แล้ว commit ก่อน"; exit 1
-          fi
-
       - name: อัปเดตตารางฐานข้อมูล
         if: ${{ inputs.migrate }}
         run: npx wrangler d1 execute banrimphoo --remote --file worker/schema.sql
@@ -56,11 +116,36 @@ jobs:
       - name: อัปเดตฐานข้อมูล (migrations ที่ยังไม่ได้รัน)
         run: npx wrangler d1 migrations apply banrimphoo --remote
 
+  deploy:
+    name: Deploy
+    needs: migrate
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: ติดตั้ง package (ตาม package-lock.json)
+        run: npm ci
+
+      - name: รับไฟล์หน้าเว็บจากกล่อง Build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-out
+          path: out
+
       - name: Deploy
         run: npx wrangler deploy --message "${GITHUB_SHA::7} by ${GITHUB_ACTOR}"
 
       - name: สรุป
         run: |
-          echo "### ✅ Deploy แล้ว" >> "$GITHUB_STEP_SUMMARY"
+          echo "### ✅ Deploy แล้ว เวอร์ชัน ${{ github.run_number }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- commit: \`${GITHUB_SHA::7}\` — $(git log -1 --pretty=%s)" >> "$GITHUB_STEP_SUMMARY"
           echo "- สร้างตารางตั้งต้น (schema.sql): ${{ inputs.migrate }} · migrations: รันทุกครั้ง (เฉพาะที่ยังไม่ได้รัน)" >> "$GITHUB_STEP_SUMMARY"

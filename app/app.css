@@ -55,6 +55,7 @@ header{background:var(--panel);border-bottom:1px solid var(--line);position:stic
 .usermenu .uname{padding:8px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;white-space:nowrap}
 .usermenu button{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .usermenu button:hover{background:var(--bg)}
+.usermenu .uver{padding:8px 10px 4px;margin-top:4px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);white-space:nowrap}
 .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 nav{display:flex;gap:4px}
 nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
