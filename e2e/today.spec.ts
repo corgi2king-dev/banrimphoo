@@ -29,7 +29,7 @@ test('เรียงตามเลขห้องแบบตัวเลข',
 });
 test('บรรทัดรองตามสถานะ: ชำระแล้ว มัดจำ ค้าง', async ({ page }) => {
   await open(page);
-  const norm = async (n: string) => (await row(page, n).locator('.who > span').innerText()).replace(/\s+/g, ' ').trim();
+  const norm = async (n: string) => (await row(page, n).locator('.who > span').textContent())!.replace(/\s+/g, ' ').trim();
   expect(await norm('สมชาย')).toBe('฿500 · 📞 0811111111 · โอน');
   expect(await norm('สมหญิง')).toBe('📞 0822222222 · ค้าง ฿400 (มัดจำแล้ว ฿300) · เงินสด');
   expect(await norm('ไม่ระบุชื่อ')).toBe('ค้าง ฿900');

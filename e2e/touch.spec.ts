@@ -6,7 +6,7 @@ const fire = (page: any, type: string, x: number, y: number, sel = 'main') => pa
   document.querySelector(sel)!.dispatchEvent(ev);
   return ev.defaultPrevented;
 }, { type, x, y, sel });
-const st = (page: any) => page.evaluate(() => { const p = document.querySelector('#ptr') as HTMLElement, a = p.querySelector('.arc') as HTMLElement; return { t: p.style.transform, off: +a.style.strokeDashoffset, ready: p.classList.contains('ready'), spin: p.classList.contains('spin') }; });
+const st = (page: any) => page.evaluate(() => { const p = document.querySelector('#ptr') as HTMLElement, a = p.querySelector('.arc') as HTMLElement; return { t: p.style.transform, off: parseFloat(a.style.strokeDashoffset), ready: p.classList.contains('ready'), spin: p.classList.contains('spin') }; });
 
 test('ดึงไม่ถึงระยะ: วงแหวนเติมบางส่วน ปล่อยแล้วกลับ', async ({ page }) => {
   await open(page);
