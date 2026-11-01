@@ -1,4 +1,5 @@
 'use client';
+import { Fragment } from 'react';
 import { store } from '@/lib/store';
 import { TH_DOW, TH_MONTHS, addDays, baht, be, parseYmd, shortTh, sumAmount, thDate, ymd } from '@/lib/format';
 import { remaining } from '@/lib/pay';
@@ -72,12 +73,12 @@ export function TodayTab() {
     </div>
     <div className="card subtle" style={{ marginTop: 16 }}><div className="row" style={{ marginBottom: 12 }}><h3 style={{ margin: 0 }}>💸 ค้างชำระทั้งหมด</h3><div className="sp" />
       <div id="tdDueSum" style={{ textAlign: 'right' }}>{dueEs.length > 0 && <><b style={{ fontSize: 18, color: 'var(--danger)' }}>{baht(dueSum)}</b><div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{new Set(dueEs.map(e => e.roomId)).size} ห้อง · {dueEs.length} คืน</div></>}</div></div>
-      <div className="tlist" id="tdDue">{dueEs.length ? [...dueByMon].map(([k, l]) => <div key={k} style={{ display: 'contents' }}>
+      <div className="tlist" id="tdDue">{dueEs.length ? [...dueByMon].map(([k, l]) => <Fragment key={k}>
         <div className="tmon">📅 {TH_MONTHS[+k.slice(5) - 1]} {be(+k.slice(0, 4))}<div className="sp" /><small>{new Set(l.map(n => n.roomId)).size} ห้อง · {l.length} คืน · </small><span style={{ color: 'var(--danger)' }}>{baht(l.reduce((a, n) => a + remaining(n), 0))}</span></div>
         {l.map(n => <div className="titem" key={n.id}><RoomTypeIcon type={s.roomById(n.roomId)?.type} />
           <div className="who"><b>ห้อง {s.roomById(n.roomId)?.name || '?'} · {n.guest || 'ไม่ระบุชื่อ'}</b>
             <span>{TH_DOW[parseYmd(n.date).getDay()]}. {shortTh(n.date)}{n.date.slice(0, 4) !== String(s.today.getFullYear()) ? ' ' + be(+n.date.slice(0, 4)) : ''}<TelLink phone={n.phone} /><DueTxt e={n} /></span></div>
           <PaidTag e={n} /></div>)}
-      </div>) : empty('ไม่มีค้างชำระ 🎉')}</div></div>
+      </Fragment>) : empty('ไม่มีค้างชำระ 🎉')}</div></div>
   </>;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { store } from '@/lib/store';
 import { TH_MONTHS, baht, be, pad, shortTh, ymd } from '@/lib/format';
 import { ACT, changesOf, dayLabel, roomNameOf } from '@/lib/history';
@@ -53,7 +53,7 @@ export function HistoryTab() {
           const d = new Date(h.at * 1000), e = h.after || h.before, day = ymd(d), isNew = h.id > s.hiNewSince && h.user !== s.user;
           const head = day !== lastDay ? dayLabel(d) : null; lastDay = day;
           const chg = h.action === 'update' ? changesOf(h.kind, h.before, h.after, s.db.rooms) : [];
-          return <div key={h.id} style={{ display: 'contents' }}>
+          return <Fragment key={h.id}>
             {head && <div className="hday">{head.main}{head.small && <small>{head.small}</small>}</div>}
             <div className={`hrow ${h.action}${isNew ? ' new' : ''}`}>
               <div className="top"><span className={`act ${h.action}`}>{ACT[h.action]}</span>
@@ -61,7 +61,7 @@ export function HistoryTab() {
                 {isNew && <span className="newtag">ใหม่</span>}<span className="who">{pad(d.getHours())}:{pad(d.getMinutes())} · {h.user || '-'}</span></div>
               <div className="sub">{h.kind === 'entries' ? `คืน ${shortTh(e.date)} · ${baht(e.amount)} · ${payText(e)}` : `${shortTh(e.date)} · ${baht(e.amount)}${e.note ? ' · ' + e.note : ''}`}</div>
               {h.action === 'update' && <div className="chg">{chg.length ? chg.map(c => <span key={c.label}>{c.label}: <s>{c.from}</s> → <ins>{c.to}</ins></span>) : <span>ไม่มีการเปลี่ยนที่แสดงได้</span>}</div>}
-            </div></div>;
+            </div></Fragment>;
         })}</div>}
     </div>
     <div className="row" id="hiPager" style={{ justifyContent: 'center', marginTop: 12 }} hidden={!rows || total <= HI_PER}>
