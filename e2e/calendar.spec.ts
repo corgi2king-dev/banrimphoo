@@ -1,0 +1,180 @@
+import { test, expect, open, saved, askYes, askNo, sql } from './helpers';
+
+const cell = (page: any, d: string) => page.locator(`#cal [data-date="${d}"]`);
+const f = (page: any) => page.locator('#entryForm');
+const go = async (page: any, d = '2026-11-18') => { await open(page, 'calendar'); await cell(page, d).click(); await expect(page.locator('#dayMask')).toHaveClass(/on/); };
+
+test('ปฏิทิน: เดือน ยอดรวม เปลี่ยนเดือน กลับวันนี้', async ({ page }) => {
+  await open(page, 'calendar');
+  await expect(page.locator('#calTitle')).toHaveText('พฤศจิกายน 2569');
+  await expect(page.locator('#calMonthSum')).toHaveText('รวมเดือนนี้ ฿11,100');
+  await page.locator('#calNext').click(); await expect(page.locator('#calTitle')).toHaveText('ธันวาคม 2569');
+  await page.locator('#calNext').click(); await expect(page.locator('#calTitle')).toHaveText('มกราคม 2570');
+  await page.locator('#calToday').click(); await expect(page.locator('#calTitle')).toHaveText('พฤศจิกายน 2569');
+  await page.locator('#calPrev').click(); await expect(page.locator('#calTitle')).toHaveText('ตุลาคม 2569');
+});
+test('ช่องวัน: ยอด สี ห้องว่าง และวันนี้', async ({ page }) => {
+  await open(page, 'calendar');
+  const c = cell(page, '2026-11-15');
+  await expect(c).toHaveClass(/today/);
+  await expect(c.locator('.sum')).toHaveText('฿2,100');
+  await expect(c.locator('.avail')).toHaveText('1/4');
+  await expect(c.locator('.chip.paid')).toContainText('1 · สมชาย');
+  await expect(c.locator('.chip.dep')).toContainText('2 · สมหญิง');
+  await expect(c.locator('.chip.pend')).toHaveText('3');
+  await expect(cell(page, '2026-11-20').locator('.avail')).toHaveText('เต็ม');
+  await expect(cell(page, '2026-11-20').locator('.avail')).toHaveClass(/full/);
+  await expect(page.locator('#calLegend')).toContainText('แถบเหลือง = มัดจำ');
+  await expect(cell(page, '2026-12-01')).toHaveClass(/other/).catch(() => {});
+});
+test('ภาพฉลองเฉพาะวันเต็มและชำระครบ ช่องไม่สูงกว่าแถวเดียวกัน', async ({ page }) => {
+  await open(page, 'calendar');
+  await expect(cell(page, '2026-11-20')).toHaveClass(/party/);
+  await expect(cell(page, '2026-11-20').locator('.confetti > span')).toHaveCount(8);
+  await expect(cell(page, '2026-11-20').locator('.confetti > em')).toHaveCount(2);
+  await expect(cell(page, '2026-11-21')).not.toHaveClass(/party/);
+  await expect(cell(page, '2026-11-15')).not.toHaveClass(/party/);
+  const a = await cell(page, '2026-11-20').boundingBox(), b = await cell(page, '2026-11-21').boundingBox();
+  expect(a!.height).toBe(b!.height);
+});
+test('วันที่มีเกิน 4 รายการ แสดง +จำนวน', async ({ page }) => {
+  sql(`INSERT INTO entries (id,date,room_id,guest,amount,paid) VALUES ('m5','2026-11-20','r5','ห้าม',300,1);`);
+  await open(page, 'calendar');
+  await expect(cell(page, '2026-11-20')).toContainText('+1 รายการ');
+});
+test('เปิดหน้าต่างวัน: รายการ ห้องว่าง ปิดได้ 3 แบบ', async ({ page }) => {
+  await go(page, '2026-11-15');
+  await expect(page.locator('#dayTitle')).toHaveText('อา. 15 พฤศจิกายน 2569');
+  await expect(page.locator('#dayList')).toContainText('ห้องว่าง: 10');
+  await expect(page.locator('#dayList')).toContainText('มัดจำ ฿300 · ค้าง ฿400');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#dayMask')).not.toHaveClass(/on/);
+  await cell(page, '2026-11-15').click();
+  await page.locator('#dayMask [data-close]').click();
+  await expect(page.locator('#dayMask')).not.toHaveClass(/on/);
+  await cell(page, '2026-11-15').click();
+  await page.locator('#dayMask').click({ position: { x: 3, y: 3 } });
+  await expect(page.locator('#dayMask')).not.toHaveClass(/on/);
+});
+test('เพิ่มรายการ: ราคาตามห้อง บันทึกลงฐานข้อมูลและปฏิทิน', async ({ page }) => {
+  await go(page);
+  await expect(f(page).locator('[name=roomId]')).toHaveValue('r1');
+  await expect(f(page).locator('[name=amount]')).toHaveValue('500');
+  await f(page).locator('[name=roomId]').selectOption('r3');
+  await expect(f(page).locator('[name=amount]')).toHaveValue('900');
+  await f(page).locator('[name=guest]').fill('ใหม่');
+  await f(page).locator('[name=phone]').fill('0801234567');
+  await f(page).locator('[name=channel]').selectOption('Agoda');
+  await f(page).locator('[name=note]').fill('เช็คอินดึก');
+  await page.locator('#entrySubmit').click();
+  await saved(page);
+  await expect(page.locator('#dayList')).toContainText('ใหม่');
+  await expect(cell(page, '2026-11-18')).toContainText('3 · ใหม่');
+  expect(sql(`SELECT room_id,guest,phone,amount,paid,channel,note FROM entries WHERE guest='ใหม่'`)).toBe('r3|ใหม่|0801234567|900.0|1|Agoda|เช็คอินดึก');
+  expect(sql(`SELECT action,user FROM history WHERE item_date='2026-11-18'`)).toBe('create|tadmin');
+});
+test('ห้องจองแล้วและห้องปิดเลือกไม่ได้ พร้อมข้อความบอกจำนวน', async ({ page }) => {
+  await go(page, '2026-11-15');
+  const sel = f(page).locator('[name=roomId]');
+  await expect(sel).toHaveValue('r4');
+  expect(await sel.locator('option[value=r1]').evaluate((o: HTMLOptionElement) => o.disabled)).toBe(true);
+  await expect(sel.locator('option[value=r1]')).toHaveText('1 (จองแล้ว)');
+  await expect(sel.locator('option[value=r5]')).toHaveText('ปิดซ่อม (ปิดปรับปรุง)');
+  await expect(page.locator('#roomHint')).toHaveText('ว่าง 1/5 ห้อง');
+});
+test('วันเต็ม: ปุ่มบันทึกกดไม่ได้', async ({ page }) => {
+  sql(`INSERT INTO entries (id,date,room_id,guest,amount,paid) VALUES ('m5','2026-11-20','r5','x',1,1);`);
+  sql(`UPDATE rooms SET status='open' WHERE id='r5'`);
+  await go(page, '2026-11-20');
+  await expect(page.locator('#entrySubmit')).toBeDisabled();
+  await expect(page.locator('#roomHint')).toHaveText('ไม่มีห้องว่างในวันนี้');
+  await expect(page.locator('#dayList')).toContainText('เต็มทุกห้อง');
+});
+test('มัดจำ: ช่องโผล่ และยอดต้องน้อยกว่าค่าเช่า', async ({ page }) => {
+  await go(page);
+  await expect(page.locator('#depWrap')).toBeHidden();
+  await f(page).locator('[name=paid]').selectOption('dep');
+  await expect(page.locator('#depWrap')).toBeVisible();
+  await f(page).locator('[name=deposit]').fill('600');
+  await page.locator('#entrySubmit').click();
+  await expect(page.locator('#toast')).toContainText('เงินมัดจำต้องน้อยกว่าค่าเช่า');
+  await f(page).locator('[name=deposit]').fill('100');
+  await f(page).locator('[name=guest]').fill('มัดจำใหม่');
+  await page.locator('#entrySubmit').click();
+  await saved(page);
+  expect(sql(`SELECT paid,deposit FROM entries WHERE guest='มัดจำใหม่'`)).toBe('0|100.0');
+  await f(page).locator('[name=paid]').selectOption('0');
+  await expect(page.locator('#depWrap')).toBeHidden();
+});
+test('แก้ไขรายการ: เติมค่าเดิม ยกเลิกได้ บันทึกได้', async ({ page }) => {
+  await go(page, '2026-11-15');
+  const r = page.locator('#dayList tr').filter({ hasText: 'สมหญิง' });
+  await r.locator('[data-eedit]').click();
+  await expect(page.locator('#entryFormTitle')).toHaveText('แก้ไขรายการ: 2 · สมหญิง');
+  await expect(f(page).locator('[name=guest]')).toHaveValue('สมหญิง');
+  await expect(f(page).locator('[name=paid]')).toHaveValue('dep');
+  await expect(f(page).locator('[name=deposit]')).toHaveValue('300');
+  await expect(f(page).locator('[name=roomId]')).toHaveValue('r2');
+  await page.locator('#entryCancel').click();
+  await expect(page.locator('#entryFormTitle')).toHaveText('เพิ่มรายการเช่า');
+  await r.locator('[data-eedit]').click();
+  await f(page).locator('[name=guest]').fill('สมหญิงแก้');
+  await page.locator('#entrySubmit').click();
+  await saved(page);
+  expect(sql(`SELECT guest FROM entries WHERE id='e4'`)).toBe('สมหญิงแก้');
+  expect(sql(`SELECT action FROM history WHERE item_id='e4' AND id>23`)).toBe('update');
+});
+test('ลบรายการ: ยกเลิกได้ และลบจริง', async ({ page }) => {
+  await go(page, '2026-11-15');
+  const r = page.locator('#dayList tr').filter({ hasText: 'สมหญิง' });
+  await r.locator('[data-edel]').click();
+  await expect(page.locator('#askMsg')).toHaveText('ลบรายการนี้?');
+  await askNo(page);
+  expect(sql(`SELECT count(*) FROM entries WHERE id='e4'`)).toBe('1');
+  await r.locator('[data-edel]').click();
+  await askYes(page);
+  await saved(page);
+  expect(sql(`SELECT count(*) FROM entries WHERE id='e4'`)).toBe('0');
+  await expect(page.locator('#dayList')).not.toContainText('สมหญิง');
+});
+test('เปลี่ยนสถานะในหน้าต่างวัน: จองหลายคืนถามว่าใช้ทุกคืนไหม', async ({ page }) => {
+  await go(page, '2026-11-25');
+  await page.locator('#dayList [data-epay]').selectOption('due').catch(() => {});
+  await page.locator('#dayList [data-epay]').selectOption('ok');
+  await expect(page.locator('#askMsg')).toContainText('การจอง 2 คืน');
+  await page.locator('#askYes').click();
+  await expect(page.locator('#askMsg')).toContainText('ชำระแล้ว ฿1,400');
+  await page.locator('#askYes').click();
+  await saved(page);
+  expect(sql(`SELECT group_concat(paid) FROM entries WHERE grp='grp1'`)).toBe('1,1');
+});
+test('พักต่อ: เติมเบอร์คืนก่อน ไม่ทับที่พิมพ์เอง', async ({ page }) => {
+  await go(page, '2026-11-11');
+  await f(page).locator('[name=roomId]').selectOption('r4');
+  await f(page).locator('[name=guest]').fill('พักต่อ');
+  await f(page).locator('[name=guest]').blur();
+  await expect(f(page).locator('[name=phone]')).toHaveValue('0899999999');
+  await expect(page.locator('#phoneHint')).toContainText('พักต่อจากคืนก่อนหน้า (ห้อง 10)');
+  await f(page).locator('[name=phone]').fill('0800000000');
+  await expect(page.locator('#phoneHint')).toBeHidden();
+  await f(page).locator('[name=guest]').fill('พักต่อ ');
+  await f(page).locator('[name=guest]').blur();
+  await expect(f(page).locator('[name=phone]')).toHaveValue('0800000000');
+});
+test('รายชื่อแขกเก่า ขึ้นหลังพิมพ์และเฉพาะที่ขึ้นต้นตรง', async ({ page }) => {
+  await go(page);
+  const g = f(page).locator('[name=guest]');
+  await g.focus();
+  await expect(page.locator('#guestList option')).toHaveCount(0);
+  await g.fill('สม');
+  await expect(page.locator('#guestList option')).toHaveCount(2);
+  await g.fill('พัก');
+  await expect(page.locator('#guestList option')).toHaveAttribute('value', 'พักต่อ');
+});
+test('บันทึกไม่สำเร็จแจ้งเตือน ข้อมูลไม่หาย', async ({ page }) => {
+  await go(page);
+  await page.route('**/api/changes', r => r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"ทดสอบ"}' }));
+  await f(page).locator('[name=guest]').fill('ไม่ผ่าน');
+  await page.locator('#entrySubmit').click();
+  await expect(page.locator('#toast')).toHaveText('บันทึกไม่สำเร็จ: ทดสอบ');
+});

@@ -18,3 +18,13 @@ node_modules/
 .wrangler/
 .d1-import.sql
 backup-*.sql
+
+# Next.js / ผลเทส
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+test-results/
+playwright-report/
+.test-state/
+test-reports/

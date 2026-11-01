@@ -1,0 +1,94 @@
+import { test, expect, open, goTab, sql } from './helpers';
+import { NOW } from './seed.mjs';
+
+test('กลุ่มตามวัน สีตามการทำ รายละเอียดการแก้ไข', async ({ page }) => {
+  await open(page, 'history');
+  await expect(page.locator('#hiTitle')).toHaveText('พฤศจิกายน 2569');
+  const days = await page.locator('.hday').allInnerTexts();
+  expect(days[0].replace(/\s+/g, ' ')).toMatch(/^วันนี้ ?15 พ\.ย\.$/);
+  expect(days[1].replace(/\s+/g, ' ')).toMatch(/^เมื่อวาน ?14 พ\.ย\.$/);
+  const rows = page.locator('.hrow');
+  await expect(rows).toHaveCount(10);
+  const u = rows.nth(0);
+  await expect(u).toHaveClass(/update/);
+  await expect(u.locator('.act')).toHaveText('แก้ไข');
+  await expect(u.locator('.who')).toHaveText('09:59 · tother');
+  await expect(u.locator('.top')).toContainText('ห้อง 2 · สมหญิง');
+  await expect(u.locator('.sub')).toHaveText('คืน 15 พ.ย. · ฿700 · มัดจำ ฿300');
+  await expect(u.locator('.chg span').nth(0)).toHaveText('จำนวนเงิน: ฿600 → ฿700');
+  await expect(u.locator('.chg span').nth(1)).toHaveText('สถานะ: ค้างชำระ → มัดจำ ฿300');
+  await expect(rows.nth(1)).toHaveClass(/delete/);
+  await expect(rows.nth(1).locator('.top')).toContainText('ไม่ระบุชื่อ');
+  await expect(rows.nth(2)).toHaveClass(/create/);
+  await expect(rows.nth(2).locator('.top')).toContainText('ค่าน้ำ');
+  await expect(rows.nth(2).locator('.sub')).toHaveText('15 พ.ย. · ฿300 · บิลน้ำ');
+});
+test('ตัวกรองและเปลี่ยนเดือน', async ({ page }) => {
+  await open(page, 'history');
+  await page.locator('#hiKind').selectOption('expenses');
+  await expect(page.locator('.hrow')).toHaveCount(1);
+  await page.locator('#hiKind').selectOption('entries');
+  await expect(page.locator('#hiPgInfo')).toHaveText('หน้า 1 / 3 · 22 รายการ');
+  await page.locator('#hiKind').selectOption('');
+  await page.locator('#hiPrev').click();
+  await expect(page.locator('#hiTitle')).toHaveText('ตุลาคม 2569');
+  await expect(page.locator('#hiList')).toContainText('ยังไม่มีการทำรายการในเดือนนี้');
+  await expect(page.locator('#hiPager')).toBeHidden();
+  await page.locator('#hiNext').click();
+  await expect(page.locator('.hrow')).toHaveCount(10);
+});
+test('แบ่งหน้า ก่อนหน้า ถัดไป และปุ่มปิดที่หน้าสุดท้าย', async ({ page }) => {
+  await open(page, 'history');
+  await expect(page.locator('#hiPgInfo')).toHaveText('หน้า 1 / 3 · 23 รายการ');
+  await expect(page.locator('#hiPgPrev')).toBeDisabled();
+  await page.locator('#hiPgNext').click();
+  await expect(page.locator('#hiPgInfo')).toHaveText('หน้า 2 / 3 · 23 รายการ');
+  await page.locator('#hiPgNext').click();
+  await expect(page.locator('#hiPgNext')).toBeDisabled();
+  await expect(page.locator('.hrow')).toHaveCount(3);
+  await page.locator('#hiPgPrev').click();
+  await expect(page.locator('.hrow')).toHaveCount(10);
+});
+test('แบ่งหน้าโหลดเพิ่มเมื่อเกิน 50 รายการ', async ({ page }) => {
+  const at = Date.parse(NOW) / 1000 - 86400 * 3;
+  sql(Array.from({ length: 40 }, (_, i) => `INSERT INTO history (at,user,kind,action,item_id,item_date,after) VALUES (${at - i},'tadmin','expenses','create','x','2026-11-01','{"id":"x","date":"2026-11-01","cat":"เพิ่ม${i}","amount":1}');`).join(''));
+  await open(page, 'history');
+  for (let i = 0; i < 4; i++) await page.locator('#hiPgNext').click();
+  const req = page.waitForRequest(r => r.url().includes('offset=50'));
+  await page.locator('#hiPgNext').click();
+  await req;
+  await page.locator('#hiPgNext').click();
+  await expect(page.locator('#hiPgInfo')).toHaveText('หน้า 7 / 7 · 63 รายการ');
+});
+test('ป้ายใหม่: นับเฉพาะผู้ใช้คนอื่น เปิดแล้วหาย รับทราบแล้วไฮไลต์หาย', async ({ page }) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem('x')) { localStorage.setItem('brp-hist-seen:tadmin', '20'); sessionStorage.setItem('x', '1'); } });
+  await open(page);
+  await expect(page.locator('#hiBadge')).toHaveText('3');
+  await goTab(page, 'history');
+  await expect(page.locator('#hiBadge')).toBeHidden();
+  await expect(page.locator('#hiNewTxt')).toHaveText('🔔 มี 3 รายการใหม่ ตั้งแต่เปิดดูครั้งล่าสุด');
+  await expect(page.locator('.hrow.new')).toHaveCount(3);
+  await expect(page.locator('.newtag')).toHaveCount(3);
+  await page.locator('#hiNewOk').click();
+  await expect(page.locator('.hrow.new')).toHaveCount(0);
+  await expect(page.locator('#hiNew')).toBeHidden();
+  await page.reload();
+  await page.locator('#tab-history').waitFor();
+  await goTab(page, 'today');
+  await expect(page.locator('#hiBadge')).toBeHidden();
+});
+test('รายการที่ตัวเองทำไม่เพิ่มป้าย', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('brp-hist-seen:tadmin', '23'));
+  await open(page);
+  await expect(page.locator('#hiBadge')).toBeHidden();
+  sql(`INSERT INTO history (at,user,kind,action,item_id,item_date,after) VALUES (1,'tadmin','entries','create','x','2026-11-01','{}');`);
+  await page.reload();
+  await page.locator('#tab-today').waitFor();
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('#hiBadge')).toBeHidden();
+});
+test('ห้องที่ลบแล้วแสดงชื่อแทนได้', async ({ page }) => {
+  sql(`PRAGMA foreign_keys=OFF;DELETE FROM rooms WHERE id='r2';`);
+  await open(page, 'history');
+  await expect(page.locator('.hrow').first().locator('.top')).toContainText('(ห้องที่ลบแล้ว)');
+});
