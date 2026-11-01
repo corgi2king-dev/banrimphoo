@@ -118,7 +118,7 @@ function DayModal({ day, onClose }: { day: string | null; onClose: () => void })
           {db.rooms.map(r => <option key={r.id} value={r.id} disabled={!!why(r)}>{r.name}{why(r) ? ` (${why(r)})` : ''}</option>)}</select></label>
         <label>ชื่อผู้เข้าพัก<input name="guest" list="guestList" autoComplete="off" value={f.guest}
           onFocus={() => { const m = new Map<string, string>(); db.entries.forEach(e => { if (e.guest) m.set(guestKey(e.guest), e.guest.trim()); }); setNames([...m.values()]); }}
-          onChange={e => set({ guest: e.target.value })} onBlur={e => fillPhone(e.target.value, f.roomId)} /></label>
+          onChange={e => { set({ guest: e.target.value }); const t = (e.nativeEvent as InputEvent).inputType; if (!t || t === 'insertReplacementText') fillPhone(e.target.value, f.roomId); /* เลือกจากรายชื่อ = เติมเบอร์ทันที */ }} onBlur={e => fillPhone(e.target.value, f.roomId)} /></label>
         <label>เบอร์โทร<input name="phone" type="tel" inputMode="tel" maxLength={20} placeholder="08x-xxx-xxxx" autoComplete="off" value={f.phone} onChange={e => { set({ phone: e.target.value }); setAutoPhone(false); setHint(''); }} /></label>
         <label>ค่าเช่า/คืน (บาท) *<input name="amount" type="number" min="0" step="1" required value={f.amount} onChange={e => set({ amount: e.target.value })} /></label>
         <label>การชำระเงิน<select name="paid" ref={el => { refs.current.paid = el; }} value={f.paid} onChange={e => { const paid = e.target.value; set({ paid, ...(paid === 'dep' ? {} : { deposit: '' }) }); if (paid === 'dep') setTimeout(() => refs.current.deposit?.focus()); }}><option value="1">ชำระแล้ว</option><option value="dep">มัดจำ</option><option value="0">ค้างชำระ</option></select></label>
