@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: 'บ้านริมภู · จัดการที่พัก', manifest: '/manifest.webmanifest',
   icons: { icon: { url: '/favicon.svg', type: 'image/svg+xml' }, apple: '/apple-touch-icon.png' },
   appleWebApp: { capable: true, title: 'บ้านริมภู', statusBarStyle: 'default' },
-  other: { 'mobile-web-app-capable': 'yes' },
+  other: { 'apple-mobile-web-app-capable': 'yes' },
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#2f6b4f' };
 export default function RootLayout({ children }: { children: ReactNode }) {

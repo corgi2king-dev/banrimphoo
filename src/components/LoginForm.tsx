@@ -7,7 +7,8 @@ export default function LoginForm() {
   useEffect(() => {
     const sc = document.createElement('script'); sc.src = '/scene.js?v=17'; document.body.append(sc);
     const im = new Image(); im.onload = () => setPhoto(true); im.src = '/photo.jpg';  // มีรูปจริง → ใช้แทนภาพวาด
-    fetch('/api/me', { cache: 'no-store' }).then(r => r.json()).then(me => { if (me.user) location.replace('/'); else user.current?.focus(); }).catch(() => setErr('ติดต่อเซิร์ฟเวอร์ไม่ได้'));
+    user.current?.focus();  // โฟกัสทันที ไม่รอ API — กันข้อความที่กำลังพิมพ์เด้งไปช่องชื่อผู้ใช้
+    fetch('/api/me', { cache: 'no-store' }).then(r => r.json()).then(me => { if (me.user) location.replace('/'); }).catch(() => setErr('ติดต่อเซิร์ฟเวอร์ไม่ได้'));
   }, []);
   return <>
     {photo ? <div className="bg photo" style={{ backgroundImage: 'url(/photo.jpg)' }} /> : <div className="bg" id="bg" data-scene="" />}

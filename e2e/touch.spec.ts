@@ -42,6 +42,6 @@ test('ไม่ทำงาน: ลากแนวนอน เลื่อน�
   await fire(page, 'touchstart', 100, 100); await fire(page, 'touchmove', 100, 330);
   expect((await st(page)).t).toBe(''); await fire(page, 'touchend', 100, 330);
   await page.keyboard.press('Escape');
-  await fire(page, 'touchstart', 100, 100, '#sumYear'); await fire(page, 'touchmove', 100, 330, '#sumYear');
-  expect((await st(page)).t).toBe(''); await fire(page, 'touchend', 100, 330, '#sumYear');
+  await fire(page, 'touchstart', 100, 100, '#askInput'); await fire(page, 'touchmove', 100, 330, '#askInput');
+  expect((await st(page)).t).toBe(''); await fire(page, 'touchend', 100, 330, '#askInput');
 });
