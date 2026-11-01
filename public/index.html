@@ -926,8 +926,7 @@ const shortTh = key => `${+key.slice(8)} ${TH_MON[+key.slice(5, 7) - 1]}`;
 // สถานะชำระของทั้งการเข้าพัก (ทุกคืนใน nights)
 const paidTag = nights => {
   const paid = nights.every(n => n.paid), dep = nights.reduce((a, n) => a + (n.paid ? 0 : received(n)), 0);
-  const rem = nights.reduce((a, n) => a + remaining(n), 0);
-  return paySelect(paid ? 'ok' : dep ? 'dep' : 'due', `data-tdpay="${nights.map(n => n.id).join(',')}"`, `มัดจำ ${baht(dep)} · ค้าง ${baht(rem)}`);
+  return paySelect(paid ? 'ok' : dep ? 'dep' : 'due', `data-tdpay="${nights.map(n => n.id).join(',')}"`, 'มัดจำ');
 };
 
 function renderToday() {
