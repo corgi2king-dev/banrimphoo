@@ -11,7 +11,7 @@ export function roomTypeKey(type?: string) {
 }
 export const ROOM_TYPES = ['ห้องเตียงเดี่ยว', 'ห้องเตียงคู่', 'ห้องแฟมิลี่', 'ห้องพัดลม', 'ห้องแอร์', 'ห้องรายเดือน'];
 export const NEW_TYPE = '__new__';
-export const EX_CATS: [string, string][] = [['ค่าน้ำ', '--c2'], ['ค่าไฟ', '--c3'], ['ค่าแม่บ้าน', '--c4'], ['ค่าซ่อมแซม', '--c5'], ['ค่าของใช้ในห้อง', '--c6'], ['ค่าอินเทอร์เน็ต', '--c7'], ['อื่น ๆ', '--c8']];
+export const EX_CATS: [string, string][] = [['ค่าน้ำ', '--c2'], ['ค่าไฟ', '--c3'], ['ค่าแม่บ้าน', '--c4'], ['ค่าซ่อมแซม', '--c5'], ['ค่าของใช้ในห้อง', '--c6'], ['ค่าอินเทอร์เน็ต', '--c7'], ['ค่างวดรีสอร์ท', '--c1'], ['อื่น ๆ', '--c8']];
 export const exColor = (cat: string) => `var(${(EX_CATS.find(c => c[0] === cat) || EX_CATS[EX_CATS.length - 1])[1]})`;
 export const ENTRY_CHANNELS = ['เงินสด', 'โอน', 'Agoda', 'Booking', 'Airbnb', 'อื่น ๆ'];
 export const EX_CHANNELS = ['เงินสด', 'โอน', 'บัตร', 'หักบัญชี'];

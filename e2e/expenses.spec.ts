@@ -29,6 +29,17 @@ test('เพิ่มค่าใช้จ่าย', async ({ page }) => {
   await expect(cell(page, '2026-11-10').locator('.sum')).toHaveText('฿450');
   expect(sql(`SELECT cat,amount,channel,note FROM expenses WHERE date='2026-11-10'`)).toBe('ค่าซ่อมแซม|450.0|โอน|ซ่อมก๊อก');
 });
+test('เพิ่มหมวดค่างวดรีสอร์ทได้ และขึ้นในคำอธิบายหมวด', async ({ page }) => {
+  await open(page, 'expenses');
+  await expect(page.locator('#exLegend')).toContainText('ค่างวดรีสอร์ท');
+  await cell(page, '2026-11-01').click();
+  await f(page).locator('[name=cat]').selectOption('ค่างวดรีสอร์ท');
+  await f(page).locator('[name=amount]').fill('25000');
+  await f(page).locator('button.pri').click();
+  await saved(page);
+  expect(sql(`SELECT cat,amount FROM expenses WHERE date='2026-11-01'`)).toBe('ค่างวดรีสอร์ท|25000.0');
+  await expect(page.locator('#exLegend')).toContainText('ค่างวดรีสอร์ท ฿25,000');
+});
 test('จำนวนเงินเป็นช่องบังคับ', async ({ page }) => {
   await open(page, 'expenses');
   await cell(page, '2026-11-10').click();
