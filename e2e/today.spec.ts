@@ -112,10 +112,26 @@ test('ค้างชำระทั้งหมด: แยกเดือน �
   await expect(page.locator('#tdDueSum')).toContainText('6 คืน');
   await expect(due.locator('.tmon')).toHaveCount(2);
   await expect(due.locator('.tmon').first()).toContainText('สิงหาคม 2568');
+  await due.locator('.tmon').first().click();
   const old = due.locator('.titem').filter({ hasText: 'เก่าค้าง' }).locator('.who > span');
   await expect(old).toContainText('ศ. 1 ส.ค. 2568');
   await expect(old).toContainText('ค้าง ฿500 (มัดจำแล้ว ฿200)');
   await expect(row(page, 'สมหญิง').locator('a')).toHaveAttribute('href', 'tel:0822222222');
+});
+test('ค้างชำระย่อขยายรายเดือน: เปิดมาขยายเฉพาะเดือนปัจจุบัน', async ({ page }) => {
+  await open(page);
+  const due = page.locator('#tdDue'), aug = due.locator('.tmon[data-mon="2025-08"]'), nov = due.locator('.tmon[data-mon="2026-11"]');
+  await expect(nov).toHaveAttribute('aria-expanded', 'true');
+  await expect(aug).toHaveAttribute('aria-expanded', 'false');
+  await expect(due.locator('.titem')).toHaveCount(5);
+  await expect(aug).toContainText('1 คืน');
+  await expect(due).not.toContainText('เก่าค้าง');
+  await aug.click();
+  await expect(due).toContainText('เก่าค้าง');
+  await nov.click();
+  await expect(due.locator('.titem')).toHaveCount(1);
+  await nov.focus(); await page.keyboard.press('Enter');
+  await expect(nov).toHaveAttribute('aria-expanded', 'true');
 });
 test('ไม่มีค้างชำระและไม่มีผู้เข้าพัก แสดงข้อความว่าง', async ({ page }) => {
   sql('UPDATE entries SET paid=1;');
