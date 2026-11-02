@@ -27,7 +27,8 @@ export class Store {
   calY = this.today.getFullYear(); calM = this.today.getMonth();
   exY = this.today.getFullYear(); exM = this.today.getMonth();
   hiY = this.today.getFullYear(); hiM = this.today.getMonth(); hiKind = '';
-  sumY = String(this.today.getFullYear()); sumM = String(this.today.getMonth());
+  sumY = String(this.today.getFullYear()); sumM = String(this.today.getMonth());  // เปิดเมนูสรุปครั้งแรก = รายเดือน เดือนปัจจุบัน
+  sumLastM = String(this.today.getMonth());  // เดือนล่าสุดที่ดู — สลับรายปีแล้วกลับมารายเดือนยังอยู่เดือนเดิม
   // ป้าย
   badge = 0; histNow = 0; hiNewSince = Infinity; hiNewCount = 0;
   toastMsg = ''; toastOn = false; private toastH: any = 0;
@@ -225,6 +226,7 @@ export class Store {
     const prev = this.db.entries.find(e => e.date === addDays(date, -1) && e.roomId === roomId && (e.guest || '').trim().toLowerCase().replace(/\s+/g, ' ') === guestK);
     return prev?.phone || '';
   }
+  setSumMonth(m: string) { this.sumM = m; if (m !== 'all') this.sumLastM = m; this.notify(); }
   exportPeriod() { return this.sumY + (this.sumM === 'all' ? '' : '-' + pad(+this.sumM + 1)); }
 }
 export const store = new Store();

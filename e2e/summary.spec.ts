@@ -7,6 +7,7 @@ const fmt = (n: number) => '฿' + n.toLocaleString('th-TH');
 const nov = entries.filter(e => e.date.startsWith('2026-11')), y26 = entries.filter(e => e.date.startsWith('2026'));
 test('กล่องตัวเลขเดือนนี้ คำนวณตรงกับข้อมูล', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
   await expect(page.locator('#sumYear')).toHaveValue('2026');
   await expect(page.locator('#sumMonth')).toHaveValue('10');
   const k = page.locator('#kpis .kpi');
@@ -26,13 +27,39 @@ test('กล่องตัวเลขเดือนนี้ คำนวณ�
 });
 test('ทั้งปี: เปลี่ยนตัวเลือก กราฟรายวันซ่อน', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
   await expect(page.locator('#chDaily svg')).toBeVisible();
-  await page.locator('#sumMonth').selectOption('all');
-  await expect(page.locator('#dayHint')).toBeVisible();
+  await page.locator('#sumModeYear').click();
+  await expect(page.locator('#chTrend svg')).toBeVisible();
   await expect(page.locator('#chDaily')).toBeHidden();
   await expect(page.locator('#kpis .kpi').first()).toContainText('ปี 2569');
   await expect(page.locator('#kpis .kpi').nth(5)).toContainText('× 365 วัน');
-  await expect(page.locator('#grpDay')).toHaveText('📆 กราฟรายวัน');
+  await expect(page.locator('#grpDay')).toBeHidden();
+  await expect(page.locator('#sumMonth')).toBeVisible();
+  await expect(page.locator('#sumMonth')).toBeDisabled();
+  await page.locator('#sumModeMonth').click();
+  await expect(page.locator('#sumModeMonth')).toHaveClass(/on/);
+  await expect(page.locator('#sumMonth')).toHaveValue('10');
+  await expect(page.locator('#chDaily svg')).toBeVisible();
+});
+test('สลับรายปีแล้วกลับมารายเดือน ยังอยู่เดือนที่เลือกไว้', async ({ page }) => {
+  await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
+  await page.locator('#sumMonth').selectOption('2');
+  await page.locator('#sumModeYear').click();
+  await page.locator('#sumModeMonth').click();
+  await expect(page.locator('#sumMonth')).toHaveValue('2');
+});
+test('กดสลับรายปี รายเดือน แล้วปุ่มไม่ขยับ', async ({ page }) => {
+  await open(page, 'summary');
+  const y = page.locator('#sumModeYear'), m = page.locator('#sumModeMonth');
+  const a = [await y.boundingBox(), await m.boundingBox()];
+  await m.click();
+  await expect(m).toHaveClass(/on/);
+  expect([await y.boundingBox(), await m.boundingBox()]).toEqual(a);
+  await y.click();
+  await expect(y).toHaveClass(/on/);
+  expect([await y.boundingBox(), await m.boundingBox()]).toEqual(a);
 });
 test('เลือกปีอื่น โหลดข้อมูลปีนั้น', async ({ page }) => {
   await open(page, 'summary');
@@ -40,31 +67,50 @@ test('เลือกปีอื่น โหลดข้อมูลปีน�
   const req = page.waitForRequest(r => r.url().includes('year=2025'));
   await page.locator('#sumYear').selectOption('2025');
   await req;
-  await page.locator('#sumMonth').selectOption('all');
+  await page.locator('#sumModeYear').click();
   await expect(page.locator('#kpis .kpi').first()).toContainText('฿1,200');
   await expect(page.locator('#kpis .kpi').nth(1)).toContainText('฿250');
 });
-test('ตารางรายเดือน: กดเลือกเดือน กดซ้ำเป็นทั้งปี', async ({ page }) => {
+test('ตารางรายเดือนอยู่ในรายปี: ดูอย่างเดียว กดแล้วไม่เปลี่ยนโหมด', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeYear').click();
   const rows = page.locator('#mtBody tr');
   await expect(rows).toHaveCount(12);
-  await expect(rows.nth(10)).toHaveClass(/sel/);
   await expect(rows.nth(10)).toContainText(fmt(sum(nov)));
   await expect(rows.nth(0)).toHaveClass(/zero/);
   await expect(page.locator('#mtFoot')).toContainText(fmt(sum(y26)));
-  await rows.nth(10).click();
-  await expect(page.locator('#sumMonth')).toHaveValue('all');
   await rows.nth(2).click();
-  await expect(page.locator('#sumMonth')).toHaveValue('2');
-  await expect(rows.nth(2)).toHaveClass(/sel/);
+  await expect(page.locator('#sumModeYear')).toHaveClass(/on/);
+  await expect(page.locator('#mtBody')).toBeVisible();
 });
-test('กราฟทุกตัวถูกวาด ตัวเลขใน tooltip ตรง', async ({ page }) => {
+test('ตารางรายเดือนเห็น % กำไร ทุกขนาดจอ และไม่ต้องเลื่อนด้านข้าง แม้ยอดหลักแสน', async ({ page }) => {
+  sql(`INSERT INTO entries (id,date,room_id,guest,amount,paid) VALUES ('big','2026-11-29','r1','ก',129000,1);INSERT INTO expenses (id,date,cat,amount) VALUES ('bigx','2026-11-29','ค่าไฟ',123000);`);
   await open(page, 'summary');
-  for (const id of ['chTrend', 'chMonthly', 'chNightsM', 'chDaily', 'chDayRooms']) await expect(page.locator(`#${id} svg`)).toBeVisible();
+  await page.locator('#sumModeYear').click();
+  await expect(page.locator('.mtable thead th').nth(4)).toBeVisible();
+  await expect(page.locator('.mtable thead th').nth(4)).toHaveText('% กำไร');
+  await expect(page.locator('#mtBody tr').nth(10).locator('td').nth(4)).toBeVisible();
+  const over = await page.locator('.mtable').evaluate(t => t.parentElement!.scrollWidth - t.parentElement!.clientWidth);
+  expect(over).toBeLessThanOrEqual(0);
+});
+test('เปิดเมนูสรุปครั้งแรกเป็นรายเดือน เดือนปัจจุบัน', async ({ page }) => {
+  await open(page, 'summary');
+  await expect(page.locator('#sumModeMonth')).toHaveClass(/on/);
+  await expect(page.locator('#sumMonth')).toHaveValue('10');
+  await expect(page.locator('#kpis .kpi').first()).toContainText('พฤศจิกายน 2569');
+});
+test('กราฟตามปุ่ม: รายปีเห็นกราฟรายเดือน รายเดือนเห็นกราฟรายวัน ตัวเลข tooltip ตรง', async ({ page }) => {
+  await open(page, 'summary');
+  await page.locator('#sumModeYear').click();
+  for (const id of ['chTrend', 'chMonthly', 'chNightsM']) await expect(page.locator(`#${id} svg`)).toBeVisible();
+  for (const id of ['chDaily', 'chDayRooms']) await expect(page.locator(`#${id}`)).toBeHidden();
   await expect(page.locator('#chMonthly .col').nth(10)).toHaveAttribute('data-tip', `พฤศจิกายน|กำไร ${fmt(sum(nov) - 2100)}|รายได้ ${fmt(sum(nov))} · ค่าใช้จ่าย ฿2,100`);
   await expect(page.locator('#chNightsM .col').nth(10)).toHaveAttribute('data-tip', `พฤศจิกายน|${nov.length} คืน`);
-  await expect(page.locator('#chDaily .col').nth(14)).toHaveAttribute('data-tip', '15 พ.ย.|฿2,100');
   await expect(page.locator('#chTrend .col').nth(10)).toHaveAttribute('data-tip', new RegExp('รายได้'));
+  await page.locator('#sumModeMonth').click();
+  for (const id of ['chDaily', 'chDayRooms']) await expect(page.locator(`#${id} svg`)).toBeVisible();
+  for (const id of ['chTrend', 'chMonthly', 'chNightsM']) await expect(page.locator(`#${id}`)).toBeHidden();
+  await expect(page.locator('#chDaily .col').nth(14)).toHaveAttribute('data-tip', '15 พ.ย.|฿2,100');
   await expect(page.locator('#chRooms .hbar')).toHaveCount(5);
   await expect(page.locator('#chEx .hbar')).toHaveCount(4);
   await expect(page.locator('#chEx .hbar').first()).toContainText('ค่าไฟ');
@@ -73,14 +119,16 @@ test('กราฟทุกตัวถูกวาด ตัวเลขใน 
 });
 test('tooltip ขึ้นตอนชี้เมาส์', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
   await page.locator('#chEx .hbar').first().hover();
   await expect(page.locator('#tip')).toBeVisible();
   await expect(page.locator('#tip')).toContainText('ค่าไฟ');
-  await page.locator('#mtTitle').hover();
+  await page.locator('#grpCat').hover();
   await expect(page.locator('#tip')).toBeHidden();
 });
 test('ลูกค้าเช่าเยอะสุด เรียงถูกและบอกคืนไม่มีชื่อ', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
   const g = page.locator('#chGuests .hbar.guest');
   await expect(g).toHaveCount(10);
   await expect(g.first()).toContainText('สมชาย'); await expect(g.first()).toContainText('3 คืน');
@@ -89,13 +137,18 @@ test('ลูกค้าเช่าเยอะสุด เรียงถู�
 });
 test('ไม่มีข้อมูลในช่วงที่เลือก แสดงข้อความว่าง', async ({ page }) => {
   await open(page, 'summary');
+  await page.locator('#sumModeMonth').click();
   await page.locator('#sumMonth').selectOption('0');
   await expect(page.locator('#chEx')).toContainText('ยังไม่มีค่าใช้จ่ายในช่วงนี้');
   await expect(page.locator('#chGuests')).toContainText('ยังไม่มีข้อมูลผู้เข้าพักในช่วงนี้');
   await expect(page.locator('#chDaily')).toContainText('ยังไม่มีข้อมูล');
 });
-test('ดาวน์โหลด Excel: ชื่อไฟล์และเนื้อหา', async ({ page }) => {
+test('ดาวน์โหลด Excel: ปุ่มไอคอน ชื่อไฟล์และเนื้อหา', async ({ page }) => {
   await open(page, 'summary');
+  await expect(page.locator('#btnExcel')).toHaveAttribute('aria-label', 'ดาวน์โหลด Excel');
+  await expect(page.locator('#btnExcel svg')).toBeVisible();
+  expect(await page.locator('#btnExcel').evaluate(e => getComputedStyle(e).borderTopWidth)).toBe('0px');
+  await page.locator('#sumModeMonth').click();
   const dl = page.waitForEvent('download');
   await page.locator('#btnExcel').click();
   const d = await dl;
@@ -105,7 +158,7 @@ test('ดาวน์โหลด Excel: ชื่อไฟล์และเน
   const xml = execFileSync('unzip', ['-p', file], { encoding: 'utf8', maxBuffer: 1e7 });
   expect(xml).toContain('สมหญิง');
   expect(xml).toContain('พฤศจิกายน 2569');
-  await page.locator('#sumMonth').selectOption('all');
+  await page.locator('#sumModeYear').click();
   const dl2 = page.waitForEvent('download');
   await page.locator('#btnExcel').click();
   expect((await dl2).suggestedFilename()).toBe('banrimphoo-2026.xlsx');

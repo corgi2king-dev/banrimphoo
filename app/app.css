@@ -55,6 +55,11 @@ header{background:var(--panel);border-bottom:1px solid var(--line);position:stic
 .usermenu .uname{padding:8px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;white-space:nowrap}
 .usermenu button{border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .usermenu button:hover{background:var(--bg)}
+button.btn.iconbtn{padding:2px;border:0;background:none;display:inline-flex;border-radius:8px}button.btn.iconbtn:hover{background:var(--accent-soft)}.iconbtn svg{width:32px;height:32px;display:block}
+#sumMonth:disabled{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;background:var(--accent-soft);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--muted);padding:5px 14px;border-radius:7px;font:inherit;font-weight:600;cursor:pointer}  /* ตัวหนาเท่ากันทั้งสองปุ่ม ขนาดปุ่มจึงไม่เปลี่ยนตอนกด */
+.seg button.on{background:var(--accent);color:var(--on-accent)}
 .usermenu .uver{padding:8px 10px 4px;margin-top:4px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);white-space:nowrap}
 .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 nav{display:flex;gap:4px}
@@ -161,9 +166,7 @@ select.tag.pay{width:auto;border:0;padding:2px 22px 2px 9px;font-size:12px;font-
 .act.update{background:var(--dep-soft);color:var(--dep-ink)}
 .act.delete{background:var(--danger-soft);color:var(--danger)}
 .mtable td,.mtable th{padding:7px 8px}
-.mtable tbody tr{cursor:pointer}
-.mtable tbody tr:hover{background:var(--bg)}
-.mtable tr.sel{background:var(--accent-soft)!important;font-weight:600}
+.mshort{display:none}
 .mtable tr.zero td{color:var(--muted)}
 .mtable tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:0}
 svg text{fill:var(--muted);font-size:11px}
@@ -260,4 +263,6 @@ nav button{white-space:nowrap}
   .cal .sum{font-size:11px}
   .hbar{grid-template-columns:80px 1fr 70px}
   th.hide-sm,td.hide-sm{display:none}
+  /* ตารางรายเดือน: คอลัมน์ครบเหมือนจอคอม · ย่อชื่อเดือนและระยะให้พอดีจอ */
+  .mtable{font-size:13px}.mtable td,.mtable th{padding:7px 4px}.mfull{display:none}.mshort{display:inline}
 }

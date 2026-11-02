@@ -84,17 +84,25 @@ export function SummaryTab() {
     ['อัตราเข้าพัก', c.occ.toFixed(1) + '%', `${c.openRooms} ห้อง × ${c.days} วัน`],
   ];
   return <>
-    <div className="card row"><h2>สรุปรายรับ-รายจ่าย</h2><div className="sp" />
+    <div className="card row"><h2>สรุปรายรับ-รายจ่าย</h2>
+      <div className="seg" role="group" aria-label="ช่วงที่ดู">
+        <button type="button" id="sumModeMonth" className={m !== null ? 'on' : undefined} aria-pressed={m !== null} onClick={() => store.setSumMonth(store.sumLastM)}>รายเดือน</button>
+        <button type="button" id="sumModeYear" className={m === null ? 'on' : undefined} aria-pressed={m === null} onClick={() => store.setSumMonth('all')}>รายปี</button>
+      </div>
+      <div className="sp" />
+      <label style={{ width: 'auto' }}>เดือน <select id="sumMonth" style={{ width: 'auto' }} disabled={m === null} value={s.sumLastM} onChange={e => store.setSumMonth(e.target.value)}>{TH_MONTHS.map((n, i) => <option key={i} value={i}>{n}</option>)}</select></label>
       <label style={{ width: 'auto' }}>ปี <select id="sumYear" style={{ width: 'auto' }} value={s.sumY} onChange={async e => { store.sumY = e.target.value; store.notify(); await store.ensureYear(+e.target.value); store.notify(); }}>{years.map(v => <option key={v} value={v}>{be(v)}</option>)}</select></label>
-      <label style={{ width: 'auto' }}>เดือน <select id="sumMonth" style={{ width: 'auto' }} value={s.sumM} onChange={e => { store.sumM = e.target.value; store.notify(); }}><option value="all">ทั้งปี</option>{TH_MONTHS.map((n, i) => <option key={i} value={i}>{n}</option>)}</select></label>
-      <button className="btn pri" id="btnExcel" title="ดาวน์โหลดรายการเช่า + สรุปตามห้อง ของช่วงที่เลือก" onClick={downloadExcel}>⬇ ดาวน์โหลด Excel</button></div>
+      <button className="btn iconbtn" id="btnExcel" title="ดาวน์โหลด Excel: รายการเช่า + สรุปตามห้อง ของช่วงที่เลือก" aria-label="ดาวน์โหลด Excel" onClick={downloadExcel}>
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="22" y="7" width="23" height="34" rx="2.5" fill="#fff" stroke="#217346" strokeWidth="2.4" /><path d="M28 13h3M34 13h7M28 19h3M34 19h7M28 25h3M34 25h7" stroke="#217346" strokeWidth="2.4" /><path d="M3 7l24-5v44L3 41z" fill="#217346" /><path d="M9.5 16l11 16M20.5 16l-11 16" stroke="#fff" strokeWidth="3.6" /><circle cx="36" cy="36" r="11" fill="#217346" stroke="#fff" strokeWidth="2" /><path d="M36 29.5v12M30.8 36.5l5.2 5.2 5.2-5.2" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button></div>
     <div className="kpis" id="kpis">{kpi.map(([l, v, x]) => <div className="kpi" key={l}><div className="l">{l}</div><div className="v">{v}</div><div className="s">{x}</div></div>)}</div>
     <div className="charts">
+      {/* รายปี: ตารางและกราฟรายเดือนของทั้งปี · รายเดือน: กราฟรายวันของเดือนนั้น */}
+      {m === null ? <>
       <div className="card" style={{ gridColumn: '1/-1' }}><h3 id="mtTitle">รายละเอียดรายเดือน · ปี {be(y)}</h3>
-        <div style={{ overflowX: 'auto' }}><table className="mtable"><thead><tr><th>เดือน</th><th className="num">ค่าเช่า</th><th className="num">ค่าใช้จ่าย</th><th className="num">กำไร</th><th className="num hide-sm">% กำไร</th></tr></thead>
-          <tbody id="mtBody">{TH_MONTHS.map((mn, i) => { const r = c.revM[i], x = c.exM[i], p = r - x; return <tr key={i} data-mt={i} className={`${i === m ? 'sel' : ''} ${r || x ? '' : 'zero'}`} onClick={() => { store.sumM = String(i === m ? 'all' : i); store.notify(); }}><td>{mn}</td><td className="num">{baht(r)}</td><td className="num" style={{ color: x ? 'var(--danger)' : 'inherit' }}>{baht(x)}</td><td className="num"><Signed v={p} /></td><td className="num hide-sm">{pct(p, r)}</td></tr>; })}</tbody>
-          <tfoot id="mtFoot"><tr><td>รวมทั้งปี</td><td className="num">{baht(tr)}</td><td className="num" style={{ color: 'var(--danger)' }}>{baht(tx)}</td><td className="num"><Signed v={tr - tx} /></td><td className="num hide-sm">{pct(tr - tx, tr)}</td></tr></tfoot></table></div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>กดที่เดือนเพื่อดูสรุปของเดือนนั้น</div></div>
+        <div style={{ overflowX: 'auto' }}><table className="mtable"><thead><tr><th>เดือน</th><th className="num">ค่าเช่า</th><th className="num">ค่าใช้จ่าย</th><th className="num">กำไร</th><th className="num">% กำไร</th></tr></thead>
+          <tbody id="mtBody">{TH_MONTHS.map((mn, i) => { const r = c.revM[i], x = c.exM[i], p = r - x; return <tr key={i} className={r || x ? undefined : 'zero'}><td><span className="mfull">{mn}</span><span className="mshort">{TH_MON[i]}</span></td><td className="num">{baht(r)}</td><td className="num" style={{ color: x ? 'var(--danger)' : 'inherit' }}>{baht(x)}</td><td className="num"><Signed v={p} /></td><td className="num">{pct(p, r)}</td></tr>; })}</tbody>
+          <tfoot id="mtFoot"><tr><td>รวมทั้งปี</td><td className="num">{baht(tr)}</td><td className="num" style={{ color: 'var(--danger)' }}>{baht(tx)}</td><td className="num"><Signed v={tr - tx} /></td><td className="num">{pct(tr - tx, tr)}</td></tr></tfoot></table></div></div>
       <h3 className="grp" id="grpMonth">📅 กราฟรายเดือน · ปี {be(y)}</h3>
       <div className="card" style={{ gridColumn: '1/-1' }}><h3 id="chTrendTitle">รายได้ · ค่าใช้จ่าย · กำไร รายเดือน · ปี {be(y)}</h3>
         <div className="legend" style={{ justifyContent: 'center', marginBottom: 4 }}><Legend items={[['var(--accent)', 'รายได้'], ['var(--danger)', 'ค่าใช้จ่าย'], ['var(--c2)', 'กำไร']]} /></div>
@@ -102,10 +110,11 @@ export function SummaryTab() {
       <div className="card"><h3 id="chMonthlyTitle">รายรับ-รายจ่ายรายเดือน · ปี {be(y)}</h3><div id="chMonthly"><PairChart a={c.revM} b={c.exM} hi={m} /></div>
         <div className="legend" style={{ marginTop: 6 }}><Legend items={[['var(--accent)', 'รายได้'], ['var(--danger)', 'ค่าใช้จ่าย']]} /></div></div>
       <div className="card"><h3 id="chNightsMTitle">จำนวนคืนที่เข้าพักรายเดือน · ปี {be(y)}</h3><div id="chNightsM"><BarChart labels={TH_MON} vals={c.nightsM} tip={i => TH_MONTHS[i]} fmt={v => v + ' คืน'} hi={m} /></div></div>
-      <h3 className="grp" id="grpDay">{m === null ? '📆 กราฟรายวัน' : `📆 กราฟรายวัน · ${c.period}`}</h3>
-      <div className="card empty" id="dayHint" style={{ gridColumn: '1/-1' }} hidden={m !== null}>เลือกเดือนด้านบน หรือกดที่เดือนในตาราง เพื่อดูกราฟรายวัน</div>
-      <div className="card day" hidden={m === null}><h3 id="chDailyTitle">รายได้รายวัน · {c.period}</h3><div id="chDaily">{m !== null && <BarChart labels={dayLbls} vals={c.perDay.map(l => l.reduce((a, e) => a + (+e.amount || 0), 0))} tip={i => `${i + 1} ${TH_MON[m]}`} every={5} />}</div></div>
-      <div className="card day" hidden={m === null}><h3 id="chDayRoomsTitle">จำนวนคืนที่เข้าพักรายวัน · {c.period}</h3><div id="chDayRooms">{m !== null && <BarChart labels={dayLbls} vals={c.perDay.map(l => l.length)} tip={i => `${i + 1} ${TH_MON[m]}`} every={5} fmt={v => v + ' คืน'} />}</div></div>
+      </> : <>
+      <h3 className="grp" id="grpDay">📆 กราฟรายวัน · {c.period}</h3>
+      <div className="card day"><h3 id="chDailyTitle">รายได้รายวัน · {c.period}</h3><div id="chDaily"><BarChart labels={dayLbls} vals={c.perDay.map(l => l.reduce((a, e) => a + (+e.amount || 0), 0))} tip={i => `${i + 1} ${TH_MON[m!]}`} every={5} /></div></div>
+      <div className="card day"><h3 id="chDayRoomsTitle">จำนวนคืนที่เข้าพักรายวัน · {c.period}</h3><div id="chDayRooms"><BarChart labels={dayLbls} vals={c.perDay.map(l => l.length)} tip={i => `${i + 1} ${TH_MON[m!]}`} every={5} fmt={v => v + ' คืน'} /></div></div>
+      </>}
       <h3 className="grp" id="grpCat">🗂 แยกตามห้อง · หมวด · ลูกค้า · {c.period}</h3>
       <div className="card"><h3>รายได้แยกตามห้อง</h3><div id="chRooms">{c.perRoom.length ? c.perRoom.map(p => <div className="hbar" key={p.r.id} data-tip={`${p.r.name}|${baht(p.sum)}|${p.n} คืน · อัตราเข้าพัก ${(p.n / c.days * 100).toFixed(0)}%`}>
         <div className="nm">{p.r.name}</div><div className="track"><div className="fill" style={{ width: `${p.sum / maxR * 100}%`, background: roomColor(s.db, p.r.id) }} /></div><div className="val">{baht(p.sum)}<div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.n} คืน</div></div></div>) : <div className="empty">ยังไม่มีห้อง</div>}</div></div>
