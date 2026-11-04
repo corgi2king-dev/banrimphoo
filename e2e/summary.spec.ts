@@ -102,15 +102,20 @@ test('เปิดเมนูสรุปครั้งแรกเป็น�
 test('กราฟตามปุ่ม: รายปีเห็นกราฟรายเดือน รายเดือนเห็นกราฟรายวัน ตัวเลข tooltip ตรง', async ({ page }) => {
   await open(page, 'summary');
   await page.locator('#sumModeYear').click();
-  for (const id of ['chTrend', 'chMonthly', 'chNightsM']) await expect(page.locator(`#${id} svg`)).toBeVisible();
-  for (const id of ['chDaily', 'chDayRooms']) await expect(page.locator(`#${id}`)).toBeHidden();
-  await expect(page.locator('#chMonthly .col').nth(10)).toHaveAttribute('data-tip', `พฤศจิกายน|กำไร ${fmt(sum(nov) - 2100)}|รายได้ ${fmt(sum(nov))} · ค่าใช้จ่าย ฿2,100`);
-  await expect(page.locator('#chNightsM .col').nth(10)).toHaveAttribute('data-tip', `พฤศจิกายน|${nov.length} คืน`);
+  for (const id of ['chTrend']) await expect(page.locator(`#${id} svg`)).toBeVisible();
+  for (const id of ['chDaily']) await expect(page.locator(`#${id}`)).toBeHidden();
+  await expect(page.locator('#chMonthly')).toHaveCount(0);
+  await expect(page.locator('#chNightsM, #chDayRooms')).toHaveCount(0);
+  await expect(page.locator('#chTrend .col').nth(10)).toHaveAttribute('data-tip', new RegExp(`^พฤศจิกายน\\|รายได้ ${fmt(sum(nov))}\nค่าใช้จ่าย ฿2,100\nกำไร ${fmt(sum(nov) - 2100)}`));
+  await expect(page.locator('#chTrend .col').nth(10)).toHaveAttribute('data-tip', new RegExp(`จำนวนคืน ${nov.length} คืน$`));
   await expect(page.locator('#chTrend .col').nth(10)).toHaveAttribute('data-tip', new RegExp('รายได้'));
   await page.locator('#sumModeMonth').click();
-  for (const id of ['chDaily', 'chDayRooms']) await expect(page.locator(`#${id} svg`)).toBeVisible();
-  for (const id of ['chTrend', 'chMonthly', 'chNightsM']) await expect(page.locator(`#${id}`)).toBeHidden();
-  await expect(page.locator('#chDaily .col').nth(14)).toHaveAttribute('data-tip', '15 พ.ย.|฿2,100');
+  for (const id of ['chDaily']) await expect(page.locator(`#${id} svg`)).toBeVisible();
+  for (const id of ['chTrend']) await expect(page.locator(`#${id}`)).toBeHidden();
+  await expect(page.locator('#chDaily .col').nth(14)).toHaveAttribute('data-tip', '15 พ.ย.|รายได้ ฿2,100\nค่าใช้จ่าย ฿1,500\nกำไร ฿600\nจำนวนคืน 3 คืน');
+  await expect(page.locator('#chDaily polyline')).toHaveCount(3);
+  await expect(page.locator('#chDaily rect.bar')).toHaveCount(0);
+  await expect(page.locator('#chDayRooms')).toHaveCount(0);
   await expect(page.locator('#chRooms .hbar')).toHaveCount(5);
   await expect(page.locator('#chEx .hbar')).toHaveCount(4);
   await expect(page.locator('#chEx .hbar').first()).toContainText('ค่าไฟ');

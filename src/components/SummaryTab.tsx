@@ -9,38 +9,18 @@ import { useStore } from './common';
 const Grid = ({ L, R, W, y, label, style }: { L: number; R: number; W: number; y: number; label: string; style?: React.CSSProperties }) => <>
   <line className="grid" x1={L} x2={W - R} y1={y} y2={y} style={style} /><text x={L - 6} y={y + 4} textAnchor="end">{label}</text></>;
 const NoData = ({ W, H, L }: { W: number; H: number; L: number }) => <text x={(W + L) / 2} y={H / 2} textAnchor="middle">ยังไม่มีข้อมูล</text>;
-function BarChart({ labels, vals, tip, every = 1, fmt = baht, hi = null }: { labels: string[]; vals: number[]; tip: (i: number) => string; every?: number; fmt?: (v: number) => string; hi?: number | null }) {
-  const W = 560, H = 220, L = 52, B = 24, T = 10, R = 8, max = niceMax(Math.max(...vals, 0)), bw = (W - L - R) / vals.length;
-  return <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
-    {[0, 1, 2, 3, 4].map(i => <Grid key={i} {...{ L, R, W }} y={H - B - (H - B - T) * i / 4} label={shortNum(max * i / 4)} />)}
-    {vals.map((v, i) => { const h = max ? (H - B - T) * v / max : 0, x = L + i * bw; return <g key={i}>
-      <g className="col" data-tip={`${tip(i)}|${fmt(v)}`}><rect className="hit" x={x} y={T} width={bw} height={H - B - T} fill="transparent" />
-        {v ? <rect className="bar" x={x + bw * 0.15} y={H - B - h} width={bw * 0.7} height={h} rx="2" opacity={hi !== null && hi !== i ? '.35' : undefined} /> : null}</g>
-      {i % every === 0 && <text x={x + bw / 2} y={H - 6} textAnchor="middle">{labels[i]}</text>}</g>; })}
-    {!vals.some(Boolean) && <NoData {...{ W, H, L }} />}</svg>;
-}
-function PairChart({ a, b, hi }: { a: number[]; b: number[]; hi: number | null }) {
-  const W = 560, H = 220, L = 52, B = 24, T = 10, R = 8, max = niceMax(Math.max(...a, ...b, 0)), bw = (W - L - R) / 12, ph = H - B - T;
-  return <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
-    {[0, 1, 2, 3, 4].map(i => <Grid key={i} {...{ L, R, W }} y={H - B - ph * i / 4} label={shortNum(max * i / 4)} />)}
-    {TH_MON.map((lb, i) => { const x = L + i * bw, ha = max ? ph * a[i] / max : 0, hb = max ? ph * b[i] / max : 0, p = a[i] - b[i], dim = hi !== null && hi !== i ? '.35' : undefined; return <g key={i}>
-      <g className="col" data-tip={`${TH_MONTHS[i]}|กำไร ${p < 0 ? '−' : ''}${baht(Math.abs(p))}|รายได้ ${baht(a[i])} · ค่าใช้จ่าย ${baht(b[i])}`}><rect className="hit" x={x} y={T} width={bw} height={ph} fill="transparent" />
-        {a[i] ? <rect className="bar" x={x + bw * 0.12} y={H - B - ha} width={bw * 0.36} height={ha} rx="2" opacity={dim} /> : null}
-        {b[i] ? <rect x={x + bw * 0.52} y={H - B - hb} width={bw * 0.36} height={hb} rx="2" fill="var(--danger)" opacity={dim} /> : null}</g>
-      <text x={x + bw / 2} y={H - 6} textAnchor="middle">{lb}</text></g>; })}
-    {!a.some(Boolean) && !b.some(Boolean) && <NoData {...{ W, H, L }} />}</svg>;
-}
-function LineChart({ series, hi }: { series: [string, number[], string][]; hi: number | null }) {
-  const W = 760, H = 260, L = 56, B = 24, T = 12, R = 12, ph = H - B - T, bw = (W - L - R) / 12, all = series.flatMap(s => s[1]), top = Math.max(0, ...all), bot = Math.min(0, ...all);
+// กราฟเส้นหลายชุด ใช้ทั้งรายเดือน (12 จุด) และรายวัน · labels = ป้ายแกน, heads = หัวข้อตอนชี้, every = ป้ายแกนทุกกี่จุด
+function LineChart({ series, nights, labels, heads, every = 1, hi = null }: { series: [string, number[], string][]; nights: number[]; labels: string[]; heads: string[]; every?: number; hi?: number | null }) {
+  const W = 760, H = 260, L = 56, B = 24, T = 12, R = 12, ph = H - B - T, bw = (W - L - R) / labels.length, all = series.flatMap(s => s[1]), top = Math.max(0, ...all), bot = Math.min(0, ...all);
   const step = niceMax((top - bot) / 5) || 1, lo = Math.floor(bot / step) * step, hiV = Math.ceil(top / step) * step || step;
   const yOf = (v: number) => T + ph * (hiV - v) / (hiV - lo), xOf = (i: number) => L + bw * (i + 0.5), sgn = (v: number) => (v < 0 ? '−' : '') + baht(Math.abs(v));
   const ticks: number[] = []; for (let v = lo; v <= hiV + step / 2; v += step) ticks.push(v);
   return <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
     {ticks.map(v => <Grid key={v} {...{ L, R, W }} y={yOf(v)} label={`${v < 0 ? '−' : ''}${shortNum(Math.abs(v))}`} style={v === 0 && lo < 0 ? { stroke: 'var(--muted)' } : undefined} />)}
-    {TH_MON.map((lb, i) => <g key={i}><g className="col" data-tip={`${TH_MONTHS[i]}|${series.map(([nm, d]) => `${nm} ${sgn(d[i])}`).join('\n')}`}><rect className="hit" x={L + i * bw} y={T} width={bw} height={ph} fill="transparent" /></g>
-      <text x={xOf(i)} y={H - 6} textAnchor="middle" style={i === hi ? { fill: 'var(--ink)', fontWeight: 700 } : undefined}>{lb}</text></g>)}
+    {labels.map((lb, i) => <g key={i}><g className="col" data-tip={`${heads[i]}|${series.map(([nm, d]) => `${nm} ${sgn(d[i])}`).join('\n')}\nจำนวนคืน ${nights[i]} คืน`}><rect className="hit" x={L + i * bw} y={T} width={bw} height={ph} fill="transparent" /></g>
+      {i % every === 0 && <text x={xOf(i)} y={H - 6} textAnchor="middle" style={i === hi ? { fill: 'var(--ink)', fontWeight: 700 } : undefined}>{lb}</text>}</g>)}
     {series.map(([nm, d, col]) => <g key={nm}><polyline points={d.map((v, i) => `${xOf(i)},${yOf(v)}`).join(' ')} fill="none" stroke={col} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" pointerEvents="none" />
-      {d.map((v, i) => <circle key={i} cx={xOf(i)} cy={yOf(v)} r={i === hi ? 5 : 3} fill={col} stroke="var(--panel)" strokeWidth="1.5" pointerEvents="none" />)}</g>)}
+      {d.map((v, i) => <circle key={i} cx={xOf(i)} cy={yOf(v)} r={i === hi ? 5 : labels.length > 12 ? 2.2 : 3} fill={col} stroke="var(--panel)" strokeWidth="1.5" pointerEvents="none" />)}</g>)}
     {!all.some(Boolean) && <NoData {...{ W, H, L }} />}</svg>;
 }
 function Donut({ parts, center }: { parts: [string, number, string][]; center: string }) {
@@ -106,14 +86,13 @@ export function SummaryTab() {
       <h3 className="grp" id="grpMonth">📅 กราฟรายเดือน · ปี {be(y)}</h3>
       <div className="card" style={{ gridColumn: '1/-1' }}><h3 id="chTrendTitle">รายได้ · ค่าใช้จ่าย · กำไร รายเดือน · ปี {be(y)}</h3>
         <div className="legend" style={{ justifyContent: 'center', marginBottom: 4 }}><Legend items={[['var(--accent)', 'รายได้'], ['var(--danger)', 'ค่าใช้จ่าย'], ['var(--c2)', 'กำไร']]} /></div>
-        <div id="chTrend"><LineChart series={[['รายได้', c.revM, 'var(--accent)'], ['ค่าใช้จ่าย', c.exM, 'var(--danger)'], ['กำไร', c.revM.map((r, i) => r - c.exM[i]), 'var(--c2)']]} hi={m} /></div></div>
-      <div className="card"><h3 id="chMonthlyTitle">รายรับ-รายจ่ายรายเดือน · ปี {be(y)}</h3><div id="chMonthly"><PairChart a={c.revM} b={c.exM} hi={m} /></div>
-        <div className="legend" style={{ marginTop: 6 }}><Legend items={[['var(--accent)', 'รายได้'], ['var(--danger)', 'ค่าใช้จ่าย']]} /></div></div>
-      <div className="card"><h3 id="chNightsMTitle">จำนวนคืนที่เข้าพักรายเดือน · ปี {be(y)}</h3><div id="chNightsM"><BarChart labels={TH_MON} vals={c.nightsM} tip={i => TH_MONTHS[i]} fmt={v => v + ' คืน'} hi={m} /></div></div>
+        <div id="chTrend"><LineChart series={[['รายได้', c.revM, 'var(--accent)'], ['ค่าใช้จ่าย', c.exM, 'var(--danger)'], ['กำไร', c.revM.map((r, i) => r - c.exM[i]), 'var(--c2)']]} nights={c.nightsM} labels={TH_MON} heads={TH_MONTHS} /></div></div>
       </> : <>
       <h3 className="grp" id="grpDay">📆 กราฟรายวัน · {c.period}</h3>
-      <div className="card day"><h3 id="chDailyTitle">รายได้รายวัน · {c.period}</h3><div id="chDaily"><BarChart labels={dayLbls} vals={c.perDay.map(l => l.reduce((a, e) => a + (+e.amount || 0), 0))} tip={i => `${i + 1} ${TH_MON[m!]}`} every={5} /></div></div>
-      <div className="card day"><h3 id="chDayRoomsTitle">จำนวนคืนที่เข้าพักรายวัน · {c.period}</h3><div id="chDayRooms"><BarChart labels={dayLbls} vals={c.perDay.map(l => l.length)} tip={i => `${i + 1} ${TH_MON[m!]}`} every={5} fmt={v => v + ' คืน'} /></div></div>
+      <div className="card day" style={{ gridColumn: '1/-1' }}><h3 id="chDailyTitle">รายได้ · ค่าใช้จ่าย · กำไร รายวัน · {c.period}</h3>
+        <div className="legend" style={{ justifyContent: 'center', marginBottom: 4 }}><Legend items={[['var(--accent)', 'รายได้'], ['var(--danger)', 'ค่าใช้จ่าย'], ['var(--c2)', 'กำไร']]} /></div>
+        <div id="chDaily">{(() => { const rev = c.perDay.map(l => l.reduce((a, e) => a + (+e.amount || 0), 0)); return <LineChart series={[['รายได้', rev, 'var(--accent)'], ['ค่าใช้จ่าย', c.exDay, 'var(--danger)'], ['กำไร', rev.map((r, i) => r - c.exDay[i]), 'var(--c2)']]}
+          nights={c.perDay.map(l => l.length)} labels={dayLbls} heads={dayLbls.map(d => `${d} ${TH_MON[m!]}`)} every={5} />; })()}</div></div>
       </>}
       <h3 className="grp" id="grpCat">🗂 แยกตามห้อง · หมวด · ลูกค้า · {c.period}</h3>
       <div className="card"><h3>รายได้แยกตามห้อง</h3><div id="chRooms">{c.perRoom.length ? c.perRoom.map(p => <div className="hbar" key={p.r.id} data-tip={`${p.r.name}|${baht(p.sum)}|${p.n} คืน · อัตราเข้าพัก ${(p.n / c.days * 100).toFixed(0)}%`}>

@@ -21,6 +21,7 @@ export function computeSummary(db: Db, y: number, m: number | null) {
   const revM = TH_MON.map((_, i) => mSum(inYear, i)), exM = TH_MON.map((_, i) => mSum(exYear, i));
   const nightsM = TH_MON.map((_, i) => inYear.filter(e => +e.date.slice(5, 7) - 1 === i).length);
   const perDay = m === null ? [] : Array.from({ length: days }, (_, i) => sel.filter(e => +e.date.slice(8) === i + 1));
+  const exDay = m === null ? [] : Array.from({ length: days }, (_, i) => sumAmount(exSel.filter(e => +e.date.slice(8) === i + 1)));
   const cats: Record<string, number> = {};
   exSel.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + (+e.amount || 0));
   const catRows = Object.entries(cats).sort((a, b) => b[1] - a[1]);
@@ -39,5 +40,5 @@ export function computeSummary(db: Db, y: number, m: number | null) {
   const top = [...gmap.values()].sort((a, b) => b.nights - a.nights || b.sum - a.sum).slice(0, 10);
   const noName = sel.filter(e => !(e.guest || '').trim()).length;
   const guests = new Set(sel.map(e => e.guest).filter(Boolean)).size;
-  return { inYear, sel, days, total, paid, dep, got, nights, openRooms, occ, period, exSel, exTotal, profit, revM, exM, nightsM, perDay, catRows, perRoom, top, noName, guests };
+  return { inYear, sel, days, total, paid, dep, got, nights, openRooms, occ, period, exSel, exTotal, profit, revM, exM, nightsM, perDay, exDay, catRows, perRoom, top, noName, guests };
 }
