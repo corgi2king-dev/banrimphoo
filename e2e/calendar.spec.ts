@@ -73,6 +73,58 @@ test('เพิ่มรายการ: ราคาตามห้อง บ�
   expect(sql(`SELECT room_id,guest,phone,amount,paid,channel,note FROM entries WHERE guest='ใหม่'`)).toBe('r3|ใหม่|0801234567|900.0|1|Agoda|เช็คอินดึก');
   expect(sql(`SELECT action,user FROM history WHERE item_date='2026-11-18'`)).toBe('create|tadmin');
 });
+test('เพิ่มหลายห้องพร้อมกัน แก้ราคาแต่ละห้องได้ และเอาห้องออกได้', async ({ page }) => {
+  await go(page);
+  await page.locator('#addRoomRow').click();
+  await page.locator('#addRoomRow').click();
+  const extra = page.locator('#entryRooms [data-extra]');
+  await expect(extra).toHaveCount(2);
+  await expect(extra.nth(0).locator('[name=extraRoom]')).toHaveValue('r2');
+  await expect(extra.nth(0).locator('[name=extraAmount]')).toHaveValue('700');
+  expect(await extra.nth(0).locator('option[value=r1]').evaluate((o: HTMLOptionElement) => o.disabled)).toBe(true);
+  await extra.nth(1).locator('[name=extraRoom]').selectOption('r4');
+  await expect(extra.nth(1).locator('[name=extraAmount]')).toHaveValue('800');
+  await extra.nth(1).locator('[name=extraAmount]').fill('650');
+  await page.locator('#addRoomRow').click();
+  await extra.nth(2).locator('.edel').click();
+  await expect(extra).toHaveCount(2);
+  await expect(page.locator('#entryTotal')).toContainText('3 ห้อง · รวม ฿1,850');
+  await f(page).locator('[name=guest]').fill('หมู่คณะ');
+  await expect(page.locator('#entrySubmit')).toHaveText('บันทึก 3 ห้อง');
+  await page.locator('#entrySubmit').click();
+  await saved(page);
+  expect(sql(`SELECT group_concat(room_id||':'||amount, ',') FROM (SELECT * FROM entries WHERE guest='หมู่คณะ' ORDER BY room_id)`)).toBe('r1:500.0,r2:700.0,r4:650.0');
+  expect(sql(`SELECT count(*) FROM history WHERE item_date='2026-11-18' AND action='create'`)).toBe('3');
+  await expect(page.locator('#entryRooms [data-extra]')).toHaveCount(0);
+  await expect(f(page).locator('[name=roomId]')).toHaveValue('r3');  // เหลือห้องว่างห้องเดียว
+  await expect(page.locator('#addRoomRow')).toHaveCount(0);
+});
+test('หลายห้อง: การชำระแยกแต่ละห้อง และมัดจำตรวจทีละห้อง', async ({ page }) => {
+  await go(page);
+  await page.locator('#addRoomRow').click();
+  await page.locator('#addRoomRow').click();
+  const extra = page.locator('#entryRooms [data-extra]');
+  await expect(extra.nth(0).locator('[name=extraPaid]')).toHaveValue('1');
+  await f(page).locator('[name=guest]').fill('แยกจ่าย');
+  await f(page).locator('[name=paid]').selectOption('dep');
+  await f(page).locator('[name=deposit]').fill('200');
+  await extra.nth(0).locator('[name=extraPaid]').selectOption('dep');
+  await expect(extra.nth(0).locator('[name=extraDeposit]')).toBeVisible();
+  await extra.nth(0).locator('[name=extraDeposit]').fill('700');
+  await extra.nth(1).locator('[name=extraPaid]').selectOption('0');
+  await page.locator('#entrySubmit').click();
+  await expect(page.locator('#toast')).toContainText('ห้อง 2: เงินมัดจำต้องน้อยกว่าค่าเช่า');
+  await extra.nth(0).locator('[name=extraDeposit]').fill('300');
+  await page.locator('#entrySubmit').click();
+  await saved(page);
+  expect(sql(`SELECT group_concat(room_id||':'||paid||':'||deposit, ',') FROM (SELECT * FROM entries WHERE guest='แยกจ่าย' ORDER BY room_id)`)).toBe('r1:0:200.0,r2:0:300.0,r3:0:0.0');
+  await expect(page.locator('#dayList tr').filter({ hasText: 'แยกจ่าย' })).toHaveCount(3);
+});
+test('แก้ไขรายการ: ไม่มีปุ่มเพิ่มห้อง', async ({ page }) => {
+  await go(page, '2026-11-15');
+  await page.locator('#dayList tr').filter({ hasText: 'สมหญิง' }).locator('[data-eedit]').click();
+  await expect(page.locator('#addRoomRow')).toHaveCount(0);
+});
 test('ห้องจองแล้วและห้องปิดเลือกไม่ได้ พร้อมข้อความบอกจำนวน', async ({ page }) => {
   await go(page, '2026-11-15');
   const sel = f(page).locator('[name=roomId]');
@@ -160,6 +212,21 @@ test('พักต่อ: เติมเบอร์คืนก่อน ไ�
   await f(page).locator('[name=guest]').fill('พักต่อ ');
   await f(page).locator('[name=guest]').blur();
   await expect(f(page).locator('[name=phone]')).toHaveValue('0800000000');
+});
+test('ชื่อแขกตรงกับการจองเดิม เติมเบอร์ให้แม้ไม่ใช่พักต่อ', async ({ page }) => {
+  await go(page, '2026-11-28');
+  await f(page).locator('[name=guest]').fill(' สมหญิง');
+  await f(page).locator('[name=guest]').blur();
+  await expect(f(page).locator('[name=phone]')).toHaveValue('0822222222');
+  await expect(page.locator('#phoneHint')).toHaveText('↻ ลูกค้าเก่าใช้เบอร์');
+  await f(page).locator('[name=guest]').fill('ไม่เคยมา');
+  await f(page).locator('[name=guest]').blur();
+  await expect(f(page).locator('[name=phone]')).toHaveValue('');
+  await expect(page.locator('#phoneHint')).toBeHidden();
+  await f(page).locator('[name=phone]').fill('0811112222');
+  await f(page).locator('[name=guest]').fill('สมหญิง');
+  await f(page).locator('[name=guest]').blur();
+  await expect(f(page).locator('[name=phone]')).toHaveValue('0811112222');  // พิมพ์เองแล้วไม่เติมทับ
 });
 test('รายชื่อแขกเก่า ขึ้นหลังพิมพ์และเฉพาะที่ขึ้นต้นตรง', async ({ page }) => {
   await go(page);

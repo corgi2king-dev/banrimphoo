@@ -221,10 +221,13 @@ export class Store {
     return sibs.length && await this.ask(`รายการนี้เป็นการจอง ${sibs.length + 1} คืน — ใช้กับทุกคืนของการจองนี้ไหม?`, 'ทุกคืน', 'เฉพาะวันนี้') ? [e, ...sibs] : [e];
   }
   // พักต่อ: คืนก่อนหน้าห้องเดียวกัน + ชื่อตรงกัน → เบอร์ของคืนนั้น
-  prevNightPhone(date: string, roomId: string, guestK: string) {
-    if (!guestK) return '';
-    const prev = this.db.entries.find(e => e.date === addDays(date, -1) && e.roomId === roomId && (e.guest || '').trim().toLowerCase().replace(/\s+/g, ' ') === guestK);
-    return prev?.phone || '';
+  // เบอร์ของแขกชื่อนี้จากข้อมูลที่โหลดไว้: หาจากชื่อก่อน (การจองที่มีเบอร์ วันใกล้ที่สุด) แล้วค่อยดูว่าพักต่อจากคืนก่อนห้องเดียวกันไหม
+  guestPhone(date: string, roomId: string, guestK: string): { phone: string; cont: boolean } {
+    if (!guestK) return { phone: '', cont: false };
+    const same = (e: Entry) => (e.guest || '').trim().toLowerCase().replace(/\s+/g, ' ') === guestK && !!e.phone;
+    const t = +new Date(date), near = this.db.entries.filter(same).sort((a, b) => Math.abs(+new Date(a.date) - t) - Math.abs(+new Date(b.date) - t))[0];
+    if (!near) return { phone: '', cont: false };
+    return { phone: near.phone!, cont: this.db.entries.some(e => e.date === addDays(date, -1) && e.roomId === roomId && same(e)) };
   }
   setSumMonth(m: string) { this.sumM = m; if (m !== 'all') this.sumLastM = m; this.notify(); }
   exportPeriod() { return this.sumY + (this.sumM === 'all' ? '' : '-' + pad(+this.sumM + 1)); }

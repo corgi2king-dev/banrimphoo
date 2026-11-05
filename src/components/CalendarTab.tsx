@@ -58,8 +58,12 @@ function DayModal({ day, onClose }: { day: string | null; onClose: () => void })
   const booked = new Set(db.entries.filter(e => e.id !== editing && e.date === day).map(e => e.roomId));
   const why = (r: { id: string; status?: string }) => r.status === 'closed' ? 'ปิดปรับปรุง' : booked.has(r.id) ? 'จองแล้ว' : '';
   const free = db.rooms.filter(r => !why(r));
+  // ห้องเพิ่มเติม (เพิ่มรายการพร้อมกันหลายห้อง): ห้องแรกอยู่ใน f.roomId / f.amount
+  const [extra, setExtra] = useState<{ roomId: string; amount: string | number; paid: string; deposit: string | number }[]>([]);  // แต่ละห้องมีการชำระของตัวเอง
+  const chosen = new Set([f.roomId, ...extra.map(x => x.roomId)]);
+  const nextFree = () => free.find(r => !chosen.has(r.id));
   const reset = () => {
-    setEditing(null); setAutoPhone(false); setHint('');
+    setEditing(null); setAutoPhone(false); setHint(''); setExtra([]);
     const first = db.rooms.filter(r => r.status !== 'closed' && !db.entries.some(e => e.date === day && e.roomId === r.id))[0];
     setF({ ...blank, roomId: first?.id || '', amount: first?.price || '' });
   };
@@ -67,31 +71,37 @@ function DayModal({ day, onClose }: { day: string | null; onClose: () => void })
   // ข้อมูลเปลี่ยน: ห้องที่เลือกถูกจองไปแล้ว → เลือกห้องว่างแรกแทน
   useEffect(() => {
     if (!day || editing) return;
-    if (!free.some(r => r.id === f.roomId)) { const r = free[0]; set({ roomId: r?.id || '', amount: r?.price || '' }); }
+    if (!free.some(r => r.id === f.roomId)) { const r = free.find(x => !extra.some(y => y.roomId === x.id)); set({ roomId: r?.id || '', amount: r?.price || '' }); }
+    setExtra(xs => xs.filter(x => free.some(r => r.id === x.roomId)));
   }, [day, editing, free.map(r => r.id).join()]);
   const list = db.entries.filter(e => e.date === day), open = db.rooms.filter(r => r.status !== 'closed');
   const freeOpen = open.filter(r => !list.some(e => e.roomId === r.id)).map(r => r.name);
   const fillPhone = (guest: string, roomId: string) => {
     if (editing || (f.phone && !autoPhone)) return;
-    const phone = s.prevNightPhone(day!, roomId, guestKey(guest));
+    const { phone, cont } = s.guestPhone(day!, roomId, guestKey(guest));
     set({ phone }); setAutoPhone(!!phone);
-    setHint(phone ? `↻ พักต่อจากคืนก่อนหน้า (ห้อง ${s.roomById(roomId)?.name || '?'}) — ใช้เบอร์เดิม` : '');
+    setHint(!phone ? '' : cont ? `↻ พักต่อจากคืนก่อนหน้า (ห้อง ${s.roomById(roomId)?.name || '?'}) — ใช้เบอร์เดิม` : '↻ ลูกค้าเก่าใช้เบอร์');
   };
   const edit = (e: Entry) => {
-    setEditing(e.id); setAutoPhone(false); setHint('');
+    setEditing(e.id); setAutoPhone(false); setHint(''); setExtra([]);
     setF({ roomId: e.roomId, guest: e.guest || '', phone: e.phone || '', amount: e.amount, paid: e.paid ? '1' : +(e.deposit || 0) > 0 ? 'dep' : '0', deposit: +(e.deposit || 0) > 0 ? e.deposit! : '', channel: e.channel || '', note: e.note || '' });
     setTimeout(() => refs.current.paid?.focus());
   };
   const submit = async (ev: FormEvent) => {
     ev.preventDefault();
     const base = { roomId: f.roomId, guest: f.guest.trim(), phone: f.phone.trim(), amount: Number(f.amount) || 0, paid: f.paid === '1', deposit: f.paid === 'dep' ? Number(f.deposit) || 0 : 0, channel: f.channel, note: f.note.trim() };
-    if (f.paid === 'dep' && base.deposit >= base.amount) return store.toast('เงินมัดจำต้องน้อยกว่าค่าเช่า — ถ้าจ่ายครบให้เลือก "ชำระแล้ว"');
+    if (editing && f.paid === 'dep' && base.deposit >= base.amount) return store.toast('เงินมัดจำต้องน้อยกว่าค่าเช่า — ถ้าจ่ายครบให้เลือก "ชำระแล้ว"');
     if (editing) {
       const e = db.entries.find(x => x.id === editing)!;
       (await store.groupTargets(e)).forEach(t => Object.assign(t, base));
     } else {
-      if (!base.roomId || booked.has(base.roomId)) return store.toast('ห้องนี้ถูกจองแล้วในช่วงวันที่เลือก');  // กันจองซ้อน
-      db.entries.push({ id: uid(), date: day!, ...base });
+      const rows = [{ roomId: base.roomId, amount: base.amount, paid: base.paid, deposit: base.deposit, pay: f.paid },
+        ...extra.map(x => ({ roomId: x.roomId, amount: Number(x.amount) || 0, paid: x.paid === '1', deposit: x.paid === 'dep' ? Number(x.deposit) || 0 : 0, pay: x.paid }))];
+      if (rows.some(r => !r.roomId || booked.has(r.roomId)) || new Set(rows.map(r => r.roomId)).size !== rows.length) return store.toast('ห้องนี้ถูกจองแล้วในช่วงวันที่เลือก');  // กันจองซ้อน
+      const bad = rows.find(r => r.pay === 'dep' && !(r.deposit > 0 && r.deposit < r.amount));
+      if (bad) return store.toast(`ห้อง ${s.roomById(bad.roomId)?.name || '?'}: เงินมัดจำต้องน้อยกว่าค่าเช่า — ถ้าจ่ายครบให้เลือก "ชำระแล้ว"`);
+      const added = rows.map(({ pay, ...r }) => ({ id: uid(), date: day!, ...base, ...r }));
+      db.entries.push(...added);
     }
     store.save(); reset();
   };
@@ -113,16 +123,27 @@ function DayModal({ day, onClose }: { day: string | null; onClose: () => void })
     </div>
     <form id="entryForm" style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }} onSubmit={submit}>
       <h3 id="entryFormTitle">{title}</h3>
-      <div className="grid2">
-        <label>ห้อง *<select name="roomId" required value={f.roomId} onChange={e => { const roomId = e.target.value; set({ roomId, ...(editing ? {} : { amount: s.roomById(roomId)?.price || '' }) }); fillPhone(f.guest, roomId); }}>
-          {db.rooms.map(r => <option key={r.id} value={r.id} disabled={!!why(r)}>{r.name}{why(r) ? ` (${why(r)})` : ''}</option>)}</select></label>
+      <div id="entryRooms">
+        <div className="erow"><label>ห้อง *<select name="roomId" required value={f.roomId} onChange={e => { const roomId = e.target.value; set({ roomId, ...(editing ? {} : { amount: s.roomById(roomId)?.price || '' }) }); fillPhone(f.guest, roomId); }}>
+          {((cur: string) => db.rooms.map(r => { const w = why(r) || (r.id !== cur && chosen.has(r.id) ? 'เลือกแล้ว' : ''); return <option key={r.id} value={r.id} disabled={!!w}>{r.name}{w ? ` (${w})` : ''}</option>; }))(f.roomId)}</select></label>
+          <label>ค่าเช่า/คืน (บาท) *<input name="amount" type="number" min="0" step="1" required value={f.amount} onChange={e => set({ amount: e.target.value })} /></label>{extra.length > 0 && <span className="edel" />}
+          <div className="epay"><label>การชำระเงิน<select name="paid" ref={el => { refs.current.paid = el; }} value={f.paid} onChange={e => { const paid = e.target.value; set({ paid, ...(paid === 'dep' ? {} : { deposit: '' }) }); if (paid === 'dep') setTimeout(() => refs.current.deposit?.focus()); }}><option value="1">ชำระแล้ว</option><option value="dep">มัดจำ</option><option value="0">ค้างชำระ</option></select></label>
+          <label id="depWrap" hidden={f.paid !== 'dep'}>เงินมัดจำ (บาท) *<input name="deposit" ref={el => { refs.current.deposit = el; }} type="number" min="1" step="1" required={f.paid === 'dep'} value={f.deposit} onChange={e => set({ deposit: e.target.value })} /></label></div></div>
+        {extra.map((x, n) => <div className="erow" key={n} data-extra={n}>
+          <label>ห้อง *<select name="extraRoom" required value={x.roomId} onChange={e => { const roomId = e.target.value; setExtra(xs => xs.map((y, k) => k === n ? { ...y, roomId, amount: s.roomById(roomId)?.price || '' } : y)); }}>
+            {((cur: string) => db.rooms.map(r => { const w = why(r) || (r.id !== cur && chosen.has(r.id) ? 'เลือกแล้ว' : ''); return <option key={r.id} value={r.id} disabled={!!w}>{r.name}{w ? ` (${w})` : ''}</option>; }))(x.roomId)}</select></label>
+          <label>ค่าเช่า/คืน (บาท) *<input name="extraAmount" type="number" min="0" step="1" required value={x.amount} onChange={e => setExtra(xs => xs.map((y, k) => k === n ? { ...y, amount: e.target.value } : y))} /></label>
+          <button type="button" className="btn sm dang edel" aria-label="เอาห้องนี้ออก" onClick={() => setExtra(xs => xs.filter((_, k) => k !== n))}>✕</button>
+          <div className="epay"><label>การชำระเงิน<select name="extraPaid" value={x.paid} onChange={e => { const paid = e.target.value; setExtra(xs => xs.map((y, k) => k === n ? { ...y, paid, ...(paid === 'dep' ? {} : { deposit: '' }) } : y)); }}><option value="1">ชำระแล้ว</option><option value="dep">มัดจำ</option><option value="0">ค้างชำระ</option></select></label>
+            <label hidden={x.paid !== 'dep'}>เงินมัดจำ (บาท) *<input name="extraDeposit" type="number" min="1" step="1" required={x.paid === 'dep'} value={x.deposit} onChange={e => setExtra(xs => xs.map((y, k) => k === n ? { ...y, deposit: e.target.value } : y))} /></label></div></div>)}
+        {!editing && nextFree() && <button type="button" className="btn sm" id="addRoomRow" onClick={() => { const r = nextFree()!; setExtra(xs => [...xs, { roomId: r.id, amount: r.price || '', paid: f.paid, deposit: '' }]); }}>+ เพิ่มห้อง</button>}
+        {extra.length > 0 && <div id="entryTotal" style={{ fontSize: 13, color: 'var(--muted)' }}>{extra.length + 1} ห้อง · รวม <b style={{ color: 'var(--accent)' }}>{baht((Number(f.amount) || 0) + extra.reduce((a, x) => a + (Number(x.amount) || 0), 0))}</b></div>}
+      </div>
+      <div className="grid2" style={{ marginTop: 10 }}>
         <label>ชื่อผู้เข้าพัก<input name="guest" list="guestList" autoComplete="off" value={f.guest}
           onFocus={() => { const m = new Map<string, string>(); db.entries.forEach(e => { if (e.guest) m.set(guestKey(e.guest), e.guest.trim()); }); setNames([...m.values()]); }}
           onChange={e => { set({ guest: e.target.value }); const t = (e.nativeEvent as InputEvent).inputType; if (!t || t === 'insertReplacementText') fillPhone(e.target.value, f.roomId); /* เลือกจากรายชื่อ = เติมเบอร์ทันที */ }} onBlur={e => fillPhone(e.target.value, f.roomId)} /></label>
         <label>เบอร์โทร<input name="phone" type="tel" inputMode="tel" maxLength={20} placeholder="08x-xxx-xxxx" autoComplete="off" value={f.phone} onChange={e => { set({ phone: e.target.value }); setAutoPhone(false); setHint(''); }} /></label>
-        <label>ค่าเช่า/คืน (บาท) *<input name="amount" type="number" min="0" step="1" required value={f.amount} onChange={e => set({ amount: e.target.value })} /></label>
-        <label>การชำระเงิน<select name="paid" ref={el => { refs.current.paid = el; }} value={f.paid} onChange={e => { const paid = e.target.value; set({ paid, ...(paid === 'dep' ? {} : { deposit: '' }) }); if (paid === 'dep') setTimeout(() => refs.current.deposit?.focus()); }}><option value="1">ชำระแล้ว</option><option value="dep">มัดจำ</option><option value="0">ค้างชำระ</option></select></label>
-        <label id="depWrap" hidden={f.paid !== 'dep'}>เงินมัดจำ (บาท) *<input name="deposit" ref={el => { refs.current.deposit = el; }} type="number" min="1" step="1" required={f.paid === 'dep'} value={f.deposit} onChange={e => set({ deposit: e.target.value })} /></label>
         <label>ช่องทาง<select name="channel" value={f.channel} onChange={e => set({ channel: e.target.value })}><option value="">-</option>{ENTRY_CHANNELS.map(c => <option key={c}>{c}</option>)}</select></label>
       </div>
       <div id="roomHint" style={{ fontSize: 13, marginTop: 6 }}>{db.rooms.length > 0 && (free.length ? <span style={{ color: 'var(--muted)' }}>ว่าง {free.length}/{db.rooms.length} ห้อง</span> : <span style={{ color: 'var(--danger)' }}>ไม่มีห้องว่างในวันนี้</span>)}</div>
@@ -131,7 +152,7 @@ function DayModal({ day, onClose }: { day: string | null; onClose: () => void })
       <label style={{ marginTop: 10 }}>หมายเหตุ<input name="note" value={f.note} onChange={e => set({ note: e.target.value })} /></label>
       <div className="row" style={{ marginTop: 14 }}><div className="sp" />
         <button type="button" className="btn" id="entryCancel" hidden={!editing} onClick={reset}>ยกเลิกแก้ไข</button>
-        <button className="btn pri" id="entrySubmit" disabled={!free.length}>บันทึก</button></div>
+        <button className="btn pri" id="entrySubmit" disabled={!free.length}>{extra.length ? `บันทึก ${extra.length + 1} ห้อง` : 'บันทึก'}</button></div>
     </form>
   </Modal>;
 }
